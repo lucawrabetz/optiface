@@ -124,8 +124,8 @@
         <mxCell id="NSehEJJ4nhmmulNn3Ske-30" value="&lt;div&gt;&lt;font size=&quot;3&quot;&gt;Query Suite&lt;/font&gt;&lt;/div&gt;&lt;div&gt;&lt;i&gt;(Data marketplace)&lt;/i&gt;&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=14;fontStyle=1" parent="1" vertex="1">
           <mxGeometry x="1250" y="585" width="300" height="170" as="geometry" />
         </mxCell>
-        <mxCell id="B6UCHWJgfinotkkjiISb-49" value="&lt;h1 style=&quot;font-size: 35px;&quot;&gt;&lt;i&gt;opti-face container &amp;amp; component - level diagram&lt;/i&gt;&lt;/h1&gt;" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontSize=35;fontStyle=4" vertex="1" parent="1">
-          <mxGeometry x="-810" y="-470" width="820" height="100" as="geometry" />
+        <mxCell id="B6UCHWJgfinotkkjiISb-49" value="&lt;h1 style=&quot;font-size: 35px;&quot;&gt;&lt;i&gt;opti-face component - level diagram&lt;/i&gt;&lt;/h1&gt;" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontSize=35;fontStyle=4" vertex="1" parent="1">
+          <mxGeometry x="-810" y="-470" width="620" height="100" as="geometry" />
         </mxCell>
         <mxCell id="B6UCHWJgfinotkkjiISb-54" value="" style="group" vertex="1" connectable="0" parent="1">
           <mxGeometry x="710" y="670" width="440" height="460" as="geometry" />
