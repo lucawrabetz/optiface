@@ -7,13 +7,11 @@ from optiface.datamodel import feature
 from typing import Type
 
 
-# Implementer: define your enum types here:
-# SolverType is required.
-# Add any other enums you need here.
-class SolverType(Enum):
-    MySolver = "MySolver"
-
-
+# TODO (LW): when we resolve the discussion in #26 on whether to have a solvers.yml or a enum.yml file, refactor the next lines.
+# Could be a good place to start an InitOptiFace() function that (or similar object) that would be run at the start of the main function of entry points.
+with open(paths.SOLVER_TYPE_YML_PATH, "r") as file:
+    solvertypes = yaml.safe_load(file)
+SolverType = Enum("SolverType", {k: v for k, v in solvertypes["SolverType"].items()})
 YML_FEATURE_TYPE_MAP: dict[str, Type] = {
     "str": str,
     "int": int,
