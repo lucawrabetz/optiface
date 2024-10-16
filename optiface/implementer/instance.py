@@ -27,9 +27,6 @@ class KnapsackInstance(iinstance.IInstance):
         self._capacity = -1
         ui.body("Knapsack instance reset [implementer]")
 
-    def print_data(self) -> None:
-        pass
-
 
 PROBLEM_INSTANCE = KnapsackInstance
 

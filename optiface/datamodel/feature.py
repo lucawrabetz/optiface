@@ -26,13 +26,8 @@ class Feature(BaseModel):
     feature_type: Type
     output_names: OutputNames
 
-    def print(self) -> None:
-        ui.body(f"Name: {self.name}")
-        ui.body(f"feature_type: {self.feature_type}")
-        ui.body(f"Default: {self.default}")
-        ui.body(f"Pretty Output Name: {self.pretty}")
-        ui.body(f"Compressed Output Name: {self.short}")
-        ui.blank_line()
+    def __str__(self) -> str:
+        return f"feature: {self.name}, type: {self.feature_type}, default: {self.default}, output name: {self.pretty} [{self.short}]"
 
     @property
     def pretty(self) -> str:
@@ -60,7 +55,7 @@ def main() -> None:
     SET_NAME = Feature(**feature_data)
     ui.header("Declaring a feature")
     ui.subheader("Set Name Example Feature")
-    SET_NAME.print()
+    ui.body(SET_NAME.__str__())
 
 
 if __name__ == "__main__":

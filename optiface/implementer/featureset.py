@@ -28,6 +28,14 @@ class FeatureSpine:
     def __init__(self) -> None:
         self.featureset: dict[str, feature.GroupKey] = {}
 
+    def __str__(self) -> str:
+        feature_set_summary = str()
+        for group_name, group in self.featureset.items():
+            feature_set_summary += f"\t{group_name}:\n"
+            for _, feature in group.items():
+                feature_set_summary += f"\t\t{feature.name}\n"
+        return f"feature set:\n{feature_set_summary}"
+
     def read_yml(self, yml_path: str) -> None:
         # TODO: discuss validation better, when discussing layers and pydantic involvement.
         # - default values need to be validated
@@ -58,20 +66,13 @@ class FeatureSpine:
     def solver_key(self) -> feature.GroupKey:
         return self.featureset["solver_key"]
 
-    def print(self) -> None:
-        ui.header("Full feature set:")
-        for group_name, group in self.featureset.items():
-            ui.subheader(group_name)
-            for _, feature in group.items():
-                feature.print()
-
 
 FEATURE_SPINE = FeatureSpine()
 FEATURE_SPINE.read_yml(paths.FEATURE_SET_YML_PATH)
 
 
 def main() -> None:
-    FEATURE_SPINE.print()
+    ui.body(FEATURE_SPINE.__str__())
 
 
 if __name__ == "__main__":
