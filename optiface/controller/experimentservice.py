@@ -8,8 +8,9 @@ from optiface.datamodel import feature
 from optiface.implementer import featureset
 from optiface.implementer import instance
 
-INSTANCE_KEY: feature.GroupKey = featureset.FEATURE_SPINE.instance_key
-SOLVER_KEY: feature.GroupKey = featureset.FEATURE_SPINE.solver_key
+SPINE = featureset.optiface_init()
+INSTANCE_KEY: feature.GroupKey = SPINE.instance_key
+SOLVER_KEY: feature.GroupKey = SPINE.solver_key
 
 
 def file_path_to_instance_id(file_path: str) -> feature.FeatureValueDict:

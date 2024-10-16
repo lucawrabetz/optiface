@@ -4,46 +4,47 @@ from enum import Enum
 from optiface import ui
 from optiface import paths
 from optiface.datamodel import feature
-from typing import Type
+from typing import Type, TypeAlias
 
 
-# TODO (LW): when we resolve the discussion in #26 on whether to have a solvers.yml or a enum.yml file, refactor the next lines.
-# Could be a good place to start an InitOptiFace() function that (or similar object) that would be run at the start of the main function of entry points.
-with open(paths.SOLVER_TYPE_YML_PATH, "r") as file:
-    solvertypes = yaml.safe_load(file)
-SolverType = Enum("SolverType", {k: v for k, v in solvertypes["SolverType"].items()})
-YML_FEATURE_TYPE_MAP: dict[str, Type] = {
-    "str": str,
-    "int": int,
-    "float": float,
-    "bool": bool,
-    "SolverType": SolverType,
-}
-
-
-# TODO: would like to move this class to optiface/datamodel/feature.py but it depends on SolverType which is here and should not be in datamodel/feature.py as it should be declared by the implementer. Ideally would like the SolverType enum to be encoded in the yaml file as well, so the implementer can add their solver types there. Not sure what the right way to do this is.
 class FeatureSpine:
+    _SOLVER_TYPE_YML_PATH: str = paths.SOLVER_TYPE_YML_PATH
+    _FEATURE_SET_YML_PATH = paths.FEATURE_SET_YML_PATH
+
     def __init__(self) -> None:
-        self.featureset: dict[str, feature.GroupKey] = {}
+        self._featureset: dict[str, feature.GroupKey] = {}
+        self._yml_to_feature_type: dict[str, Type] = {
+            "str": str,
+            "int": int,
+            "float": float,
+            "bool": bool,
+        }
 
     def __str__(self) -> str:
         feature_set_summary = str()
-        for group_name, group in self.featureset.items():
-            feature_set_summary += f"\t{group_name}:\n"
+        for group_name, group in self._featureset.items():
+            feature_set_summary += f"\n\t{group_name}:"
             for _, feature in group.items():
-                feature_set_summary += f"\t\t{feature.name}\n"
-        return f"feature set:\n{feature_set_summary}"
+                feature_set_summary += f"\n\t\t{feature.name}"
+        return f"feature set:{feature_set_summary}"
 
-    def read_yml(self, yml_path: str) -> None:
+    def read_yml_solvertype(self) -> None:
+        with open(paths.SOLVER_TYPE_YML_PATH, "r") as file:
+            solvertypes = yaml.safe_load(file)
+        SolverType = Enum(
+            "SolverType", {k: v for k, v in solvertypes["SolverType"].items()}
+        )
+        self._yml_to_feature_type["SolverType"] = SolverType
+
+    def read_yml_featureset(self) -> None:
         # TODO: discuss validation better, when discussing layers and pydantic involvement.
-        # - default values need to be validated
-        with open(yml_path, "r") as file:
+        with open(self._FEATURE_SET_YML_PATH, "r") as file:
             yml_data = yaml.safe_load(file)
 
             for group_name, group_data in yml_data["featureset"].items():
                 group: feature.GroupKey = {}
                 for feature_name, feature_data in group_data.items():
-                    feature_type: Type = YML_FEATURE_TYPE_MAP[
+                    feature_type: Type = self._yml_to_feature_type[
                         feature_data["feature_type"]
                     ]
                     new_feature = feature.Feature(
@@ -54,23 +55,35 @@ class FeatureSpine:
                     )
                     group[feature_name] = new_feature
 
-                self.featureset[group_name] = group
+                self._featureset[group_name] = group
+
+    def configure_from_yml(self) -> None:
+        self.read_yml_solvertype()
+        self.read_yml_featureset()
 
     @property
     def instance_key(self) -> feature.GroupKey:
-        return self.featureset["instance_key"]
+        return self._featureset["instance_key"]
 
     @property
     def solver_key(self) -> feature.GroupKey:
-        return self.featureset["solver_key"]
+        return self._featureset["solver_key"]
+
+    @property
+    def feature_set(self) -> feature.FeatureValueDict:
+        return self._featureset
 
 
-FEATURE_SPINE = FeatureSpine()
-FEATURE_SPINE.read_yml(paths.FEATURE_SET_YML_PATH)
+def optiface_init() -> FeatureSpine:
+    fs = FeatureSpine()
+    fs.configure_from_yml()
+    return fs
 
 
 def main() -> None:
-    ui.body(FEATURE_SPINE.__str__())
+    fs = FeatureSpine()
+    fs.configure_from_yml()
+    ui.body(fs.__str__())
 
 
 if __name__ == "__main__":
