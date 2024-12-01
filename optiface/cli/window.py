@@ -478,9 +478,6 @@ class ServiceWindow(BaseWindow):
     def body_string(self, l: str) -> str:
         return hcenter_margin(self._dim, _DEFAULT_MEDIUM_INDENT) + l
 
-    def get_char_input(self) -> int:
-        return self._win.getch()
-
     def dim_from_parent(self) -> WindowDim:
         return window_dim(self._parent, self._off_dim)
 
