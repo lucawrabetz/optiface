@@ -1,3 +1,10 @@
+"""
+throughout, size, height, width are in the following units:
+  - horizontal: number of characters
+  - vertical: number of lines
+  - stdscr: parent window
+"""
+
 from __future__ import annotations
 from abc import ABC, abstractmethod
 import curses
@@ -5,15 +12,14 @@ from dataclasses import dataclass
 import datetime
 from enum import Enum
 import re
+from typing import TypeAlias
+
+from optiface.service import api
 
 
 _DATE_FORMAT = "%B %d, %Y"
 _TIME_FORMAT = "%H:%M:%S %p"
 
-# throughout, size, height, width are in the following units:
-#   - horizontal: number of characters
-#   - vertical: number of lines
-#   - stdscr: parent window
 
 # constants
 _SPECIAL_CHAR = "="
@@ -212,7 +218,7 @@ def header_dim(win) -> WindowDim:
         parent_dim.y,
         parent_dim.x,
         string_height(parent_dim, header_buffer(parent_dim)) + 1,
-        int(parent_dim.width / 2.7),
+        int(parent_dim.width / 3),
     )
     return window_dim(win, off_dim)
 
@@ -231,6 +237,7 @@ def footer_dim(win) -> WindowDim:
 
 # color definitions
 class Color(Enum):
+    DEFAULT = 0
     RED = 1
     GREEN = 2
     BLUE = 3
@@ -254,15 +261,27 @@ def init_colors():
     curses.init_pair(Color.ORANGE.value, 6, -1)
 
 
-class BaseWindow(ABC):
+@dataclass(frozen=True)
+class WinColorConfig:
+    body = Color.DEFAULT
+    special = Color.ORANGE
+    good = Color.GREEN
+    bad = Color.RED
+
+
+Window: TypeAlias = curses.window
+
+
+class BaseWindow(api.IOView[str]):
     def __init__(self, stdscr, border: bool):
         self._scroll: bool = self.scroll_from_parent()
         self._border: bool = border
         self._parent = stdscr
         self._dim: WindowDim = self.dim_from_parent()
-        self._win = curses.newwin(
+        self._win: Window = curses.newwin(
             self._dim.height, self._dim.width, self._dim.y, self._dim.x
         )
+        self._colors: WinColorConfig = self.colors_from_parent()
         self._win.scrollok(self._scroll)
         self._win.clear()
         self._zero: int = 0
@@ -292,6 +311,11 @@ class BaseWindow(ABC):
     def curs(self) -> tuple[int, int]:
         return self._win.getyx()
 
+    # input
+    def get_char_input(self) -> int:
+        return self._win.getch()
+
+    # printing utilities
     def new_line(self) -> None:
         y, _ = self._win.getyx()
         if y == self._dim.height - 1:
@@ -320,17 +344,37 @@ class BaseWindow(ABC):
             return
         self.new_line()
 
-    @abstractmethod
-    def body_string(self, l: str) -> str:
-        pass
+    def separator_line(self, color: Color | None = None) -> None:
+        s: str = separator_line(self._dim, border=self._border)
+        self.print_buf(s, color, False)
 
+    # runtime initialization
+    def dim_from_parent(self) -> WindowDim:
+        return WindowDim(0, 0, self._parent.height, self._parent.width)
+
+    def scroll_from_parent(self) -> bool:
+        return False
+
+    def colors_from_parent(self) -> WinColorConfig:
+        return WinColorConfig()
+
+    # runtime print strings
+    def body_string(self, l: str) -> str:
+        indent = opti_indent_string(self._dim)
+        return indent + l
+
+    def emptybody_string(self, l: str) -> str:
+        indent = hcenter_margin(self._dim, _DEFAULT_MEDIUM_INDENT)
+        return indent + l
+
+    def special_string(self, l: str) -> str:
+        indent: str = opti_indent_string(self._dim, time=True)
+        return indent + l
+
+    # public interface for printing messages
     def body(self, l: str, color: Color | None = None) -> None:
         s: str = self.body_string(l)
         self.print_buf(s, color, True)
-
-    @abstractmethod
-    def emptybody_string(self, l: str) -> str:
-        pass
 
     def emptybody(
         self, l: str, color: Color | None = None, new_line: bool = True
@@ -338,9 +382,13 @@ class BaseWindow(ABC):
         s: str = self.emptybody_string(l)
         self.print_buf(s, color, new_line)
 
-    def separator_line(self, color: Color | None = None) -> None:
-        s: str = separator_line(self._dim, border=self._border)
-        self.print_buf(s, color, False)
+    def special(self, l: str, sep: bool = True) -> None:
+        self.new_line()
+        if sep:
+            self.separator_line(self._colors.special)
+            self.new_line()  # to end separator line
+        self.body(self.special_string(l), self._colors.special)
+        self.new_line()
 
     def print_bufs(
         self, *bufs: tuple[str, Color | None], new_line: bool = True
@@ -357,13 +405,12 @@ class BaseWindow(ABC):
         del self._win
         return self._parent
 
-    @abstractmethod
-    def dim_from_parent(self) -> WindowDim:
-        pass
+    # optiio interface
+    def push(self, val: str) -> None:
+        self.body(val)
 
-    @abstractmethod
-    def scroll_from_parent(self) -> bool:
-        pass
+    def pull(self) -> list[str]:
+        return [chr(self.get_char_input())]
 
 
 # fixed windows
@@ -417,21 +464,10 @@ class UIWindow(BaseWindow):
         self._off_dim = off_dim
         super().__init__(stdscr, border)
 
-    def emptybody_string(self, l: str) -> str:
-        indent = hcenter_margin(self._dim, _DEFAULT_MEDIUM_INDENT)
-        return indent + l
-
-    def body_string(self, l: str) -> str:
-        indent = opti_indent_string(self._dim)
-        return indent + l
-
     def subheader(self, l: str) -> None:
         self.new_line()
         self.body(l, Color.ORANGE)
         self.new_line()
-
-    def get_char_input(self) -> int:
-        return self._win.getch()
 
     def dim_from_parent(self) -> WindowDim:
         return window_dim(self._parent, self._off_dim)
@@ -452,13 +488,6 @@ class ServiceWindow(BaseWindow):
     def body_string(self, l: str) -> str:
         indent = hcenter_margin(self._dim, _DEFAULT_MEDIUM_INDENT)
         return indent + l
-
-    def subheader(self, l: str) -> None:
-        self.new_line()
-        self.separator_line(Color.ORANGE)
-        self.new_line()
-        self.body(l, Color.ORANGE)
-        self.new_line()
 
     def get_char_input(self) -> int:
         return self._win.getch()
@@ -486,7 +515,16 @@ def init_curses(stdscr):
     stdscr.bkgd(" ", curses.color_pair(0))
 
 
-def main(stdscr):
+@dataclass
+class CLI:
+    header: HeaderWindow
+    footer: FooterWindow
+    status: UIWindow
+    main: UIWindow
+    service: ServiceWindow
+
+
+def opti_cli_init(stdscr) -> CLI:
     init_curses(stdscr)
     header_win = HeaderWindow(stdscr)
     footer_win = FooterWindow(stdscr)
@@ -513,23 +551,34 @@ def main(stdscr):
         width=status_off_dim.width,
     )
     service_win = ServiceWindow(stdscr, service_off_dim)
+    return CLI(
+        header=header_win,
+        footer=footer_win,
+        service=service_win,
+        main=main_win,
+        status=status_win,
+    )
+
+
+def main(stdscr):
+    cli = opti_cli_init(stdscr)
     i: int = 1
     while True:
         if i % 10 == 0:
-            service_y, _ = service_win.curs
-            if service_y == service_win.height - 1:
+            service_y, _ = cli.service.curs
+            if service_y == cli.service.height - 1:
                 break
-            main_win.subheader("multiple of 10!")
-            service_win.subheader("multiple of 10!")
+            cli.main.subheader("multiple of 10!")
+            cli.service.special("multiple of 10!")
         if i % 4 == 0:
-            service_y, _ = service_win.curs
-            if service_y == service_win.height - 1:
+            service_y, _ = cli.service.curs
+            if service_y == cli.service.height - 1:
                 break
             key = testpause_rep(
-                service_win, "welcome to this window! (q) or (*)", Color.MAGENTA
+                cli.service, "welcome to this window! (q) or (*)", Color.MAGENTA
             )
         else:
-            key = testpause_rep(main_win)
+            key = testpause_rep(cli.main)
         i += 1
         if chr(key).lower() == "q":
             break
