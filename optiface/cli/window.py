@@ -17,18 +17,21 @@ from typing import TypeAlias
 from optiface.service import api
 
 
+# constants
 _DATE_FORMAT = "%B %d, %Y"
 _TIME_FORMAT = "%H:%M:%S %p"
-
-
-# constants
 _SPECIAL_CHAR = "="
 _COPYRIGHT_CHAR = chr(169)
 _OPTIFACE_UI_EMOJI = ":-]"
+
 _SINGLE_HINDENT_SCREEN_DIVIDER = 150
 _MIN_HINDENT_SIZE = 1
 _SINGLE_VINDENT_SCREEN_DIVIDER = 100
 _MIN_VINDENT_SIZE = 0
+_DEFAULT_SMALL_INDENT = 1
+_DEFAULT_MEDIUM_INDENT = 2
+_DEFAULT_LARGE_INDENT = 5
+_PRECISION = 2
 
 
 # useful lightweight structs for size stuff
@@ -94,12 +97,6 @@ class MarginDim:
 def hcenter_margin(dim: WindowDim, indent: int) -> str:
     margin = " " * MarginDim.hcentered(dim, indent).pre
     return margin
-
-
-_DEFAULT_SMALL_INDENT = 1
-_DEFAULT_MEDIUM_INDENT = 2
-_DEFAULT_LARGE_INDENT = 5
-_PRECISION = 2
 
 
 # string utilities and wrappers
@@ -247,9 +244,6 @@ class Color(Enum):
 
 
 def init_colors():
-    """
-    Initialize color pairs for curses.
-    """
     curses.start_color()
     curses.use_default_colors()
     curses.init_pair(Color.RED.value, curses.COLOR_RED, -1)
@@ -360,16 +354,13 @@ class BaseWindow(api.IOView[str]):
 
     # runtime print strings
     def body_string(self, l: str) -> str:
-        indent = opti_indent_string(self._dim)
-        return indent + l
+        return opti_indent_string(self._dim) + l
 
     def emptybody_string(self, l: str) -> str:
-        indent = hcenter_margin(self._dim, _DEFAULT_MEDIUM_INDENT)
-        return indent + l
+        return hcenter_margin(self._dim, _DEFAULT_MEDIUM_INDENT) + l
 
     def special_string(self, l: str) -> str:
-        indent: str = opti_indent_string(self._dim, time=True)
-        return indent + l
+        return opti_indent_string(self._dim, time=True) + l
 
     # public interface for printing messages
     def body(self, l: str, color: Color | None = None) -> None:
@@ -482,12 +473,10 @@ class ServiceWindow(BaseWindow):
         super().__init__(stdscr, border)
 
     def emptybody_string(self, l: str) -> str:
-        indent = hcenter_margin(self._dim, _DEFAULT_SMALL_INDENT)
-        return indent + l
+        return hcenter_margin(self._dim, _DEFAULT_SMALL_INDENT) + l
 
     def body_string(self, l: str) -> str:
-        indent = hcenter_margin(self._dim, _DEFAULT_MEDIUM_INDENT)
-        return indent + l
+        return hcenter_margin(self._dim, _DEFAULT_MEDIUM_INDENT) + l
 
     def get_char_input(self) -> int:
         return self._win.getch()
