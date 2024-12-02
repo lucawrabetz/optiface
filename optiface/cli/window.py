@@ -321,6 +321,7 @@ class BaseWindow(api.IOView[str]):
     def new_line(self) -> None:
         y, _ = self._win.getyx()
         if y == self._dim.height - 1:
+            # TODO: edge case here, scroll will return error if scroll is not enabled
             self._win.scroll(1)
             self._win.move(y, self._zero)
         else:
@@ -489,7 +490,7 @@ class ServiceWindow(BaseWindow):
         return window_dim(self._parent, self._off_dim)
 
     def scroll_from_parent(self) -> bool:
-        return False
+        return True
 
 
 _CONTINUE = "(*)ontinue:"
@@ -501,9 +502,13 @@ def testpause_rep(
 ) -> int:
     main_win.push(prompt)
     key: int = main_win.get_char_input()
+    if chr(key) == "q":
+        # TODO - the interface for the UI should probably have a convenient
+        # quitting mechanism
+        main_win.body(f"QUIT")
     main_win.body(f"You pressed {key}! {_CONTINUE}", color=color)
-    _ = main_win.get_char_input()
-    return key
+    quit = main_win.get_char_input()
+    return quit
 
 
 def testchoice_rep(
@@ -586,10 +591,10 @@ def main(stdscr):
             )
         else:
             key = testpause_rep(cli.main)
+            if chr(key) == "q":
+                break
             s: str = testchoice_rep(cli.service)
         i += 1
-        if chr(key).lower() == "q":
-            break
         service_y, _ = cli.service.curs
 
 
