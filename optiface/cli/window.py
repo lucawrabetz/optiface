@@ -11,11 +11,13 @@ import curses
 from dataclasses import dataclass
 import datetime
 from enum import Enum
+import random
 import re
+from typing import final
 from typing import TypeAlias
 
 from optiface.service import api
-
+from optiface.cli import pick
 
 # constants
 _DATE_FORMAT = "%B %d, %Y"
@@ -23,6 +25,7 @@ _TIME_FORMAT = "%H:%M:%S %p"
 _SPECIAL_CHAR = "="
 _COPYRIGHT_CHAR = chr(169)
 _OPTIFACE_UI_EMOJI = ":-]"
+_ALPHABET = "abcdefghijklmnopqrstuvwxyz"
 
 _SINGLE_HINDENT_SCREEN_DIVIDER = 150
 _MIN_HINDENT_SIZE = 1
@@ -309,6 +312,11 @@ class BaseWindow(api.IOView[str]):
     def get_char_input(self) -> int:
         return self._win.getch()
 
+    def get_single_choice(self, *options: str, title="select an option:"):
+        choice = pick.pick(options=options, title=title, screen=self._win)[0]
+        self.new_line()
+        return choice
+
     # printing utilities
     def new_line(self) -> None:
         y, _ = self._win.getyx()
@@ -373,13 +381,13 @@ class BaseWindow(api.IOView[str]):
         s: str = self.emptybody_string(l)
         self.print_buf(s, color, new_line)
 
+    @final
     def special(self, l: str, sep: bool = True) -> None:
         self.new_line()
         if sep:
             self.separator_line(self._colors.special)
             self.new_line()  # to end separator line
-        self.body(self.special_string(l), self._colors.special)
-        self.new_line()
+        self.print_buf(self.special_string(l), self._colors.special, new_line=True)
 
     def print_bufs(
         self, *bufs: tuple[str, Color | None], new_line: bool = True
@@ -397,8 +405,12 @@ class BaseWindow(api.IOView[str]):
         return self._parent
 
     # optiio interface
-    def push(self, val: str) -> None:
-        self.body(val)
+    def push(self, val: str, special: bool = False) -> None:
+        if special:
+            self.special(val)
+        else:
+            self.body(val)
+        self.new_line()
 
     def pull(self) -> list[str]:
         return [chr(self.get_char_input())]
@@ -455,11 +467,6 @@ class UIWindow(BaseWindow):
         self._off_dim = off_dim
         super().__init__(stdscr, border)
 
-    def subheader(self, l: str) -> None:
-        self.new_line()
-        self.body(l, Color.ORANGE)
-        self.new_line()
-
     def dim_from_parent(self) -> WindowDim:
         return window_dim(self._parent, self._off_dim)
 
@@ -468,7 +475,7 @@ class UIWindow(BaseWindow):
 
 
 class ServiceWindow(BaseWindow):
-    def __init__(self, stdscr, off_dim: WindowDim | None = None, border: bool = True):
+    def __init__(self, stdscr, off_dim: WindowDim | None = None, border: bool = False):
         self._off_dim = off_dim
         super().__init__(stdscr, border)
 
@@ -485,13 +492,30 @@ class ServiceWindow(BaseWindow):
         return False
 
 
+_CONTINUE = "(*)ontinue:"
+_QUIT_OR_ANY = "(q)uit or (*):"
+
+
 def testpause_rep(
-    main_win, prompt: str = "press (q)uit or (*):", color: Color = Color.YELLOW
+    main_win, prompt: str = _QUIT_OR_ANY, color: Color = Color.YELLOW
 ) -> int:
-    main_win.body(prompt, color)
+    main_win.push(prompt)
     key: int = main_win.get_char_input()
-    main_win.body(f"You pressed {key}", None)
+    main_win.body(f"You pressed {key}! {_CONTINUE}", color=color)
+    _ = main_win.get_char_input()
     return key
+
+
+def testchoice_rep(
+    main_win, prompt: str = "select a character:", color: Color = Color.MAGENTA
+) -> str:
+    chars = random.sample(_ALPHABET, k=9)
+    choice = main_win.get_single_choice(*chars, title=prompt)
+    main_win.new_line()
+    main_win.push(f"You chose {choice[0]}! {_CONTINUE}")
+    _ = main_win.get_char_input()
+    main_win.new_line()
+    return choice[0]
 
 
 def init_curses(stdscr):
@@ -549,25 +573,24 @@ def opti_cli_init(stdscr) -> CLI:
 def main(stdscr):
     cli = opti_cli_init(stdscr)
     i: int = 1
-    while True:
+    service_y, _ = cli.service.curs
+    while service_y != cli.service.height - 1:
+        key: int = 0
         if i % 10 == 0:
+            cli.main.push("multiple of 10!", special=True)
+            cli.service.push("multiple of 10!", special=True)
+        elif i % 4 == 0:
             service_y, _ = cli.service.curs
-            if service_y == cli.service.height - 1:
-                break
-            cli.main.subheader("multiple of 10!")
-            cli.service.special("multiple of 10!")
-        if i % 4 == 0:
-            service_y, _ = cli.service.curs
-            if service_y == cli.service.height - 1:
-                break
             key = testpause_rep(
                 cli.service, "welcome to this window! (q) or (*)", Color.MAGENTA
             )
         else:
             key = testpause_rep(cli.main)
+            s: str = testchoice_rep(cli.service)
         i += 1
         if chr(key).lower() == "q":
             break
+        service_y, _ = cli.service.curs
 
 
 if __name__ == "__main__":
