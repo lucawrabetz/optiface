@@ -15,6 +15,22 @@ class IOView(ABC, Generic[ValType]):
         pass
 
 
+class ServiceAdaptor(ABC, Generic[ValType]):
+    def __init__(self, input_view: IOView[ValType], output_view: IOView[ValType]):
+        self._input_view = input_view
+        self._output_view = output_view
+
+    def push(self, val: ValType) -> None:
+        self._output_view.push(val)
+
+    def pull(self) -> Sequence[ValType]:
+        return self._input_view.pull()
+
+    @abstractmethod
+    def run(self) -> None:
+        pass
+
+
 def main(stdscr):
     from optiface.cli import window
 
