@@ -15,14 +15,19 @@ cd your-fork
 ```
 
 Set up your local environment.
+
+USE POETRY!!!
+https://python-poetry.org/docs/
+
+
 ```bash
-# using conda
-conda env create -f requirements/environment.yml
-conda activate opti-face
+# unix
+curl -sSL https://install.python-poetry.org | python3 -
 ```
-TODO: see [pip environment issue](https://github.com/lucawrabetz/opti-face/issues/3).
-```bash
-# or using venv and pip
+
+```powershell
+# windows
+(Invoke-WebRequest -Uri https://install.python-poetry.org -UseBasicParsing).Content | py -
 ```
 
 Complete your *opti-fork implementation to-do list*.
