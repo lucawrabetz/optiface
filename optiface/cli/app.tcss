@@ -1,0 +1,27 @@
+OptiFooter {
+  dock: bottom;
+  height: 1;
+  content-align: center middle;
+  color: white;
+  background: $success-lighten-3 40%;
+  padding-left: 1;
+}
+
+#app_grid {
+  layout: grid;
+  grid-size: 2;
+  grid-columns: 0.618fr 0.382fr; /* golden ratio */
+}
+
+#right_col {
+  layout: grid;
+  grid-rows: 1fr 1fr;
+}
+
+#main_cli {
+}
+
+.opti_widget {
+  border: round $primary-darken-2;
+  height: 100%;
+}
