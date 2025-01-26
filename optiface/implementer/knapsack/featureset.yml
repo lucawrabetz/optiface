@@ -1,0 +1,40 @@
+featureset:
+  instance_key:
+    set_name:
+      default: "test"
+      feature_type: "str"
+      output_names:
+        - "Set Name"
+        - "s_n"
+    n:
+      default: -1
+      feature_type: "int"
+      output_names:
+        - "Number of Items"
+        - "n"
+    instance_rep:
+      default: 0
+      feature_type: "int"
+      output_names:
+        - "Instance Rep"
+        - "i_rep"
+  solver_key:
+    solver:
+      default: "MySolver"
+      feature_type: "SolverType"
+      output_names:
+        - "Solver"
+        - "sol"
+  outputs:
+    objective:
+      default: -1.0
+      feature_type: "float"
+      output_names:
+        - "Objective"
+        - "obj"
+    time:
+      default: -1.0
+      feature_type: "int"
+      output_names:
+        - "Running Time (ms)"
+        - "t_ms"

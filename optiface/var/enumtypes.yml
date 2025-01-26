@@ -1,0 +1,4 @@
+knapsack:
+  RatioKPSolver: "ratiokp"
+knapsack2:
+  RatioKPSolver: "ratiokp"
