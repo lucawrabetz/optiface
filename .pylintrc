@@ -1,0 +1,19 @@
+# Minimal .pylintrc file to match black defaults and PEP 8.
+[MASTER]
+
+# Specify the maximum line length (Black defaults to 88 characters)
+max-line-length=88
+
+[FORMAT]
+
+# Set the output format to be consistent with Black
+# Black outputs messages in a more concise format, similar to pylint's "parseable" format
+msg-template = "{line}:{column}: {msg_id}: {msg}"
+
+# Enable checking for syntax errors (similar to Black's behavior)
+disable = C0114, C0115, C0116
+
+[TYPECHECK]
+
+# Disable type checking (since we use mypy for this purpose)
+disable = all
