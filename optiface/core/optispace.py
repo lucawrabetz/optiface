@@ -1,13 +1,13 @@
-import os
+from pathlib import Path
 import yaml
-
 from dataclasses import dataclass
 from pydantic import BaseModel
+
 from typing import Any, TypeAlias, TypeVar, Generic
 
 T = TypeVar("T")
 
-_SPACE = "space"
+_SPACE: Path = Path("space")
 _PS_FILE = "problemspace.yaml"
 
 
@@ -59,7 +59,7 @@ def read_ps_from_yaml(name: str) -> ProblemSpace:
         - in: problem name (e.g. testproblem, knapsack)
         - out: ProblemSpace object configured from space/<name>/problemspace.yaml
     """
-    filepath = os.path.join(_SPACE, name, _PS_FILE)
+    filepath = str(_SPACE / name / _PS_FILE)
     instance_key: GroupKey = dict()
     solver_key: GroupKey = dict()
     outputs: GroupKey = dict()
@@ -77,3 +77,17 @@ def read_ps_from_yaml(name: str) -> ProblemSpace:
         outputs=outputs,
         filepath=filepath,
     )
+
+
+def read_optispace_from_yaml() -> list[str]:
+    """
+    Factory for OptiSpace
+        - out: list of problem names
+    """
+    problems: list[str] = []
+
+    for entry in _SPACE.iterdir():
+        if entry.is_dir():
+            problems.append(entry.name)
+
+    return problems

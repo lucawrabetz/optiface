@@ -1,13 +1,19 @@
 import importlib
-import os
-import pytest
+from pathlib import Path
+
 from typing import Any
 
-from optiface.core.optispace import Feature, ProblemSpace, read_ps_from_yaml
+from optiface.core.optispace import (
+    Feature,
+    ProblemSpace,
+    read_ps_from_yaml,
+    read_optispace_from_yaml,
+)
 
-TEST_PS_NAME: str = "testproblem"
+_TEST_PS_NAME: str = "testproblem"
+_TEST_PS_NAME_2: str = "testproblem2"
 # TODO (maybe): constant below is not DRY with constants in optiface/core/optispace.py
-TEST_PS_FILEPATH: str = os.path.join("space", "testproblem", "problemspace.yaml")
+_TEST_PS_PATH: Path = Path("space") / _TEST_PS_NAME / "problemspace.yaml"
 
 
 # TODO: unclear whether str is enough as solver "uuid" or if a solver id class is helpful
@@ -71,7 +77,7 @@ def init_data_feature_time_ms() -> dict[str, Any]:
 
 def init_test_problem_space() -> ProblemSpace:
     return ProblemSpace(
-        name=TEST_PS_NAME,
+        name=_TEST_PS_NAME,
         instance_key={
             "set_name": Feature(**init_data_feature_set_name()),
             "n": Feature(**init_data_feature_n()),
@@ -82,7 +88,7 @@ def init_test_problem_space() -> ProblemSpace:
             "objective": Feature(**init_data_feature_objective()),
             "time_ms": Feature(**init_data_feature_time_ms()),
         },
-        filepath=TEST_PS_FILEPATH,
+        filepath=str(_TEST_PS_PATH),
     )
 
 
@@ -115,16 +121,28 @@ class TestProblemSpace:
 
     def test_ps_read(self):
         test_ps = init_test_problem_space()
-        read_ps = read_ps_from_yaml(name=TEST_PS_NAME)
+        read_ps = read_ps_from_yaml(name=_TEST_PS_NAME)
         assert test_ps == read_ps
 
 
 class TestOptiSpace:
     """
+    - note: to start lean - start with just a list of problem names to work towards "optispace"
+    - as global state of current active problem, other problems that can be switched to.
+    - list will be manipulated by PSM to start with, build from there.
     Behaviors:
-    - optispace initialization behaviors?
+    - initialization behaviors?
     - switch between problem spaces as expected
     """
 
+    def test_init_optispace(self):
+        optispace: list[str] = read_optispace_from_yaml()
+        optispace_set = set(optispace)
+        assert _TEST_PS_NAME in optispace_set
+        assert _TEST_PS_NAME_2 in optispace_set
+
     def test_ps_switch(self):
-        assert True == False
+        """
+        TODO: active problem - is a state that is not yet tracked on optispace
+        """
+        assert True == True

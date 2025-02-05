@@ -1,11 +1,9 @@
 import importlib
 import types
-from typing import AsyncGenerator
 
 import pytest
 from front.app import OptiFaceTUI, OptiTop, SpaceView, MainCLI
 from textual.widgets import Footer
-from textual.pilot import Pilot
 
 
 @pytest.fixture
@@ -22,9 +20,7 @@ class TestSetup:
 
 @pytest.mark.asyncio
 class TestApp:
-    async def test_app_widget_initialization(
-        self, app: OptiFaceTUI, capfd: pytest.CaptureFixture[str]
-    ) -> None:
+    async def test_app_widget_initialization(self, app: OptiFaceTUI) -> None:
         async with app.run_test() as pilot:
             await pilot.pause()
             assert app.query_one(OptiTop) is not None
