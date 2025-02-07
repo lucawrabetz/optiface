@@ -43,6 +43,12 @@ class ProblemSpace(BaseModel):
     filepath: str
 
 
+@dataclass
+class OptiSpace:
+    problems: list[str]
+    current: str
+
+
 def process_key(data: dict[str, Any]) -> GroupKey:
     key: GroupKey = dict()
     for feature_name, feature_data in data.items():
@@ -79,10 +85,9 @@ def read_ps_from_yaml(name: str) -> ProblemSpace:
     )
 
 
-def read_optispace_from_yaml() -> list[str]:
+def read_optispace() -> OptiSpace:
     """
     Factory for OptiSpace
-        - out: list of problem names
     """
     problems: list[str] = []
 
@@ -90,4 +95,4 @@ def read_optispace_from_yaml() -> list[str]:
         if entry.is_dir():
             problems.append(entry.name)
 
-    return problems
+    return OptiSpace(problems=problems, current=problems[0])

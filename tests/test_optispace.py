@@ -6,8 +6,9 @@ from typing import Any
 from optiface.core.optispace import (
     Feature,
     ProblemSpace,
+    OptiSpace,
     read_ps_from_yaml,
-    read_optispace_from_yaml,
+    read_optispace,
 )
 
 _TEST_PS_NAME: str = "testproblem"
@@ -127,22 +128,47 @@ class TestProblemSpace:
 
 class TestOptiSpace:
     """
-    - note: to start lean - start with just a list of problem names to work towards "optispace"
-    - as global state of current active problem, other problems that can be switched to.
-    - list will be manipulated by PSM to start with, build from there.
+    - start with just a list of problem names
+    - list will be managed by PSM
     Behaviors:
-    - initialization behaviors?
-    - switch between problem spaces as expected
+    - initialization behaviors
     """
 
     def test_init_optispace(self):
-        optispace: list[str] = read_optispace_from_yaml()
-        optispace_set = set(optispace)
-        assert _TEST_PS_NAME in optispace_set
-        assert _TEST_PS_NAME_2 in optispace_set
+        optispace: OptiSpace = read_optispace()
+        problems = set(optispace.problems)
+        assert _TEST_PS_NAME in problems
+        assert _TEST_PS_NAME_2 in problems
+
+
+class TestPSM:
+    """
+    - write a top-level function (maybe even exported, in optiface/__init__.py to get a problem space)
+    - psm only needs to have a wizard to take input, and write functionality to yaml
+    - "switching" ps just means calling the top-level function to refresh or read a different one
+    Behaviors:
+    - switch between problem spaces as expected
+    """
 
     def test_ps_switch(self):
         """
         TODO: active problem - is a state that is not yet tracked on optispace
+        - make a global problem space object, just one
+        - the active problem is the name attribute
         """
-        assert True == True
+        assert False
+
+    def test_ps_add(self):
+        """
+        add new problem
+            - add new problem with psm wizard
+            - check that problemspace.yaml file is correct
+            - check that optispace is updated (1 new problem name)
+        """
+        assert False
+
+    def test_ps_add_feature(self):
+        """
+        add new feature to problemspace
+        """
+        assert False
