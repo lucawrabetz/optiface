@@ -11,13 +11,25 @@ from optiface.core.optispace import (
     read_optispace,
 )
 
-_TEST_PS_NAME: str = "testproblem"
-_TEST_PS_NAME_2: str = "testproblem2"
+######### VERY IMPORTANT #########
+
+# note: case insensitive conventions
+# ProblemSpace, problemspace, PrOblemsPace are the same
+
+# ProblemSpace - always refers to the ProblemSpace class
+# pspace - refers to an arbitrary problem space
+
+# OptiSpace - always refers to the OptiSpace class
+# ospace - refers to this opti space
+
+##################################
+
+_TEST_PSPACE_NAME: str = "testproblem"
 # TODO (maybe): constant below is not DRY with constants in optiface/core/optispace.py
-_TEST_PS_PATH: Path = Path("space") / _TEST_PS_NAME / "problemspace.yaml"
+_TEST_PSPACE_PATH: Path = Path("space") / _TEST_PSPACE_NAME / "problemspace.yaml"
 
 
-# TODO: unclear whether str is enough as solver "uuid" or if a solver id class is helpful
+# TODO: unclear to me whether str is enough as solver "uuid" or if a solver id class is helpful
 def init_data_feature_set_name() -> dict[str, Any]:
     return {
         "name": "set_name",
@@ -78,7 +90,7 @@ def init_data_feature_time_ms() -> dict[str, Any]:
 
 def init_test_problem_space() -> ProblemSpace:
     return ProblemSpace(
-        name=_TEST_PS_NAME,
+        name=_TEST_PSPACE_NAME,
         instance_key={
             "set_name": Feature(**init_data_feature_set_name()),
             "n": Feature(**init_data_feature_n()),
@@ -89,7 +101,7 @@ def init_test_problem_space() -> ProblemSpace:
             "objective": Feature(**init_data_feature_objective()),
             "time_ms": Feature(**init_data_feature_time_ms()),
         },
-        filepath=str(_TEST_PS_PATH),
+        filepath=str(_TEST_PSPACE_PATH),
     )
 
 
@@ -118,27 +130,55 @@ class TestProblemSpace:
     """
     Behaviors:
     - read a problem space as expected
+    - note that this is testing the ProblemSpace class
     """
 
-    def test_ps_read(self):
-        test_ps = init_test_problem_space()
-        read_ps = read_ps_from_yaml(name=_TEST_PS_NAME)
-        assert test_ps == read_ps
+    def test_problemspace_read(self):
+        test_pspace = init_test_problem_space()
+        read_pspace = read_ps_from_yaml(name=_TEST_PSPACE_NAME)
+        assert test_pspace == read_pspace
 
 
 class TestOptiSpace:
     """
     - start with just a list of problem names
     - list will be managed by PSM
-    Behaviors:
-    - initialization behaviors
+
+    Behaviors (init optispace):
+    - test problems exist
+
+    Behaviors (ospace):
+    - every problem name is correctly read, and filepath correctly constructed
+    - every feature has a name (str), default (str), verbose_name (str), short_name (str)
     """
 
     def test_init_optispace(self):
-        optispace: OptiSpace = read_optispace()
-        problems = set(optispace.problems)
-        assert _TEST_PS_NAME in problems
-        assert _TEST_PS_NAME_2 in problems
+        ospace: OptiSpace = read_optispace()
+        problems = set(ospace.problems)
+        assert _TEST_PSPACE_NAME in problems
+
+    def test_ospace(self):
+        ospace: OptiSpace = read_optispace()
+
+        for problem in ospace.problems:
+            # ProblemSpace is a BaseModel, so pydantic checks its types (right Pete?).
+            # We will still assert some types for excessive testing.
+
+            # TODO: make sure that once you do PSM, switch current
+            # ospace.current = problem
+            pspace: ProblemSpace = read_ps_from_yaml(problem)
+            assert isinstance(pspace.name, str)
+            assert pspace.name == problem
+            assert isinstance(pspace.filepath, Path)
+
+            for f_name, f in pspace.instance_key.items():
+                assert isinstance(f_name, str)
+                assert f_name == f.name
+                assert f.default is not None
+                assert isinstance(f.verbose_name, str)
+                assert len(f.verbose_name) > 0
+                assert isinstance(f.short_name, str)
+                assert len(f.short_name) > 0
 
 
 class TestPSM:

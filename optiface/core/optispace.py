@@ -16,7 +16,8 @@ class Feature(Generic[T]):
     """
     Struct for a (results table) schema feature.
 
-    TODO: is a feature_type: Type[T] (which requires str_to_type spines to read from yaml) useful? Starting without.
+    TODO: is a feature_type: Type[T] (which requires str_to_type spines to read from yaml) useful? Starting without (where does validation come from)?
+    TODO: unclear if Generic is necessary.
     """
 
     name: str
@@ -40,7 +41,7 @@ class ProblemSpace(BaseModel):
     instance_key: GroupKey
     solver_key: GroupKey
     outputs: GroupKey
-    filepath: str
+    filepath: Path
 
 
 @dataclass
@@ -65,7 +66,7 @@ def read_ps_from_yaml(name: str) -> ProblemSpace:
         - in: problem name (e.g. testproblem, knapsack)
         - out: ProblemSpace object configured from space/<name>/problemspace.yaml
     """
-    filepath = str(_SPACE / name / _PS_FILE)
+    filepath = Path(_SPACE) / name / _PS_FILE
     instance_key: GroupKey = dict()
     solver_key: GroupKey = dict()
     outputs: GroupKey = dict()
