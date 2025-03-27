@@ -24,16 +24,41 @@ from optiface.core.optispace import (
 
 ##################################
 
+_SPACE = "space"
 _PSPACE_YAML = "problemspace.yaml"
-_EXPERIMENTS_DB = "experiments.db"
 
-_TEST_PSPACE_NAME: str = "testproblem"
+_DEFAULT_PSPACE_NAME: str = "defaultproblem"
 # TODO: move problemspace.yaml and experiments.db to optiface/core/optispace.py
-_TEST_PSPACE_PATH: Path = Path("space") / _TEST_PSPACE_NAME / _PSPACE_YAML
-_TEST_PSPACEDB_PATH: Path = Path("space") / _TEST_PSPACE_NAME / _EXPERIMENTS_DB
+_DEFAULT_PSPACE_PATH: Path = Path(_SPACE) / _DEFAULT_PSPACE_NAME / _PSPACE_YAML
 
 
-# TODO: unclear to me whether str is enough as solver "uuid" or if a solver id class is helpful
+def init_data_feature_run_id() -> dict[str, Any]:
+    return {
+        "name": "run_id",
+        "default": -1,
+        "verbose_name": "Run Id",
+        "short_name": "run_id",
+    }
+
+
+def init_data_feature_timestamp_added() -> dict[str, Any]:
+    return {
+        "name": "timestamp_added",
+        "default": "1996-09-11 00:00:00.000",
+        "verbose_name": "Timestamp Added",
+        "short_name": "ts_added",
+    }
+
+
+def init_data_feature_added_from() -> dict[str, Any]:
+    return {
+        "name": "added_from",
+        "default": "RUN",
+        "verbose_name": "Added From",
+        "short_name": "from",
+    }
+
+
 def init_data_feature_set_name() -> dict[str, Any]:
     return {
         "name": "set_name",
@@ -65,6 +90,7 @@ def init_data_feature_rep() -> dict[str, Any]:
     }
 
 
+# TODO: unclear to me whether str is enough as solver "uuid" or if a solver id class is helpful
 def init_data_feature_solver() -> dict[str, Any]:
     return {
         "name": "solver",
@@ -92,20 +118,25 @@ def init_data_feature_time_ms() -> dict[str, Any]:
     }
 
 
-def init_test_problem_space() -> ProblemSpace:
+def init_default_problem_space() -> ProblemSpace:
     return ProblemSpace(
-        name=_TEST_PSPACE_NAME,
+        name=_DEFAULT_PSPACE_NAME,
+        run_key={
+            "run_id": Feature(**init_data_feature_run_id()),
+            "timestamp_added": Feature(**init_data_feature_timestamp_added()),
+            "added_from": Feature(**init_data_feature_added_from()),
+        },
         instance_key={
             "set_name": Feature(**init_data_feature_set_name()),
             "n": Feature(**init_data_feature_n()),
             "rep": Feature(**init_data_feature_rep()),
         },
         solver_key={"solver": Feature(**init_data_feature_solver())},
-        outputs={
+        output_key={
             "objective": Feature(**init_data_feature_objective()),
             "time_ms": Feature(**init_data_feature_time_ms()),
         },
-        filepath=str(_TEST_PSPACE_PATH),
+        filepath=_DEFAULT_PSPACE_PATH,
     )
 
 
@@ -137,9 +168,9 @@ class TestProblemSpace:
     - note that this is testing the ProblemSpace class
     """
 
-    def test_pspace_read(self):
-        test_pspace = init_test_problem_space()
-        read_pspace = read_pspace_from_yaml(name=_TEST_PSPACE_NAME)
+    def test_defaultpspace_read(self):
+        test_pspace = init_default_problem_space()
+        read_pspace = read_pspace_from_yaml(name=_DEFAULT_PSPACE_NAME)
         assert test_pspace == read_pspace
 
 
@@ -156,7 +187,7 @@ class TestOptiSpace:
 
     def test_ospace(self):
         ospace: OptiSpace = read_ospace()
-        assert _TEST_PSPACE_NAME in set(ospace.problems)
+        assert _DEFAULT_PSPACE_NAME in set(ospace.problems)
 
         for problem in ospace.problems:
             # ProblemSpace is a BaseModel, so pydantic checks its types (right Pete?).

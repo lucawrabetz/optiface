@@ -1,0 +1,115 @@
+run_key:
+  run_id:
+    default: -1
+    verbose_name: "Run Id"
+    short_name: "run_id"
+  timestamp_added:
+    default: "1996-09-11 00:00:00.000"
+    verbose_name: "Timestamp Added"
+    short_name: "ts_added"
+  added_from:
+    default: "RUN"
+    verbose_name: "Added From"
+    short_name: "from"
+
+instance_key:
+  set_name:
+    default: "test"
+    verbose_name: "Set Name"
+    short_name: "s_n"
+  instance_name: # derived column, see default
+    default: "test" # plus the rest of the instance key
+    verbose_name: "Instance Name"
+    short_name: "i_n"
+  nodes:
+    default: -1
+    verbose_name: "Nodes"
+    short_name: "n"
+  arcs:
+    default: -1
+    verbose_name: "Arcs"
+    short_name: "m"
+  k_zero:
+    default: -1
+    verbose_name: "Arcs"
+    short_name: "m"
+  density: # derived column, see default
+    default: 0.0 # m / (n (n - 1))
+    verbose_name: "Density"
+    short_name: "den"
+  scenarios:
+    default: 1
+    verbose_name: "Scenarios"
+    short_name: "p"
+  budget:
+    default: 1
+    verbose_name: "Budget"
+    short_name: "r_0"
+  policies:
+    default: 1
+    verbose_name: "Policies"
+    short_name: "k"
+  rep:
+    default: 0
+    verbose_name: "Instance Rep"
+    short_name: "i_rep"
+
+solver_key:
+  solver:
+    default: "MIP"
+    verbose_name: "Solver"
+    short_name: "sol"
+  subsolver:
+    default: "N_A"
+    verbose_name: "SubSolver"
+    short_name: "sub"
+
+output_key:
+  objective:
+    default: -1.0
+    verbose_name: "Objective"
+    short_name: "obj"
+  time_ms:
+    default: -1.0
+    verbose_name: "Running Time (ms)"
+    short_name: "t_ms"
+  unbounded:
+    default: False
+    verbose_name: "Unbounded"
+    short_name: "unbnd"
+  optimal:
+    default: False
+    verbose_name: "Optimal"
+    short_name: "opt"
+  gap:
+    default: 0.0
+    verbose_name: "Optimality Gap"
+    short_name: "gap"
+  cuts_rounds:
+    default: -1
+    verbose_name: "Rounds of Cuts"
+    short_name: "cuts"
+  cuts_added:
+    default: -1
+    verbose_name: "Total Cuts Added"
+    short_name: "tot_cuts"
+  avg_cbtime:
+    default: -1.0
+    verbose_name: "Average Callback Time (ms)"
+    short_name: "cbtime"
+  avg_sptime:
+    default: -1.0
+    verbose_name: "Average Shortest Path Time (ms)"
+    short_name: "sptime"
+  partition:
+    default: "0"
+    verbose_name: "Partition"
+    short_name: "part"
+  m_sym:
+    default: -1
+    verbose_name: "Manual Symmetry Detection"
+    short_name: "m_sym"
+  g_sym:
+    default: -1
+    verbose_name: "Gurobi Symmetry Detection"
+    short_name: "g_sym"

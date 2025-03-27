@@ -7,6 +7,11 @@ from typing import Any, TypeAlias, TypeVar, Generic
 
 T = TypeVar("T")
 
+_RUN_KEY = "run_key"
+_INSTANCE_KEY = "instance_key"
+_SOLVER_KEY = "solver_key"
+_OUTPUT_KEY = "output_key"
+
 _SPACE: Path = Path("space")
 _PS_FILE = "problemspace.yaml"
 
@@ -38,9 +43,10 @@ FeatureValuePair: TypeAlias = tuple[Feature, Any]
 
 class ProblemSpace(BaseModel):
     name: str
+    run_key: GroupKey
     instance_key: GroupKey
     solver_key: GroupKey
-    outputs: GroupKey
+    output_key: GroupKey
     filepath: Path
 
 
@@ -66,22 +72,25 @@ def read_pspace_from_yaml(name: str) -> ProblemSpace:
         - in: problem name (e.g. testproblem, knapsack)
         - out: ProblemSpace object configured from space/<name>/problemspace.yaml
     """
-    filepath = Path(_SPACE) / name / _PS_FILE
+    filepath: Path = Path(_SPACE) / name / _PS_FILE
+    run_key: GroupKey = dict()
     instance_key: GroupKey = dict()
     solver_key: GroupKey = dict()
     outputs: GroupKey = dict()
 
     with open(filepath, "r") as file:
         yml_data = yaml.safe_load(file)
-        instance_key = process_key(yml_data["instance_key"])
-        solver_key = process_key(yml_data["solver_key"])
-        outputs = process_key(yml_data["outputs"])
+        run_key = process_key(yml_data[_RUN_KEY])
+        instance_key = process_key(yml_data[_INSTANCE_KEY])
+        solver_key = process_key(yml_data[_SOLVER_KEY])
+        output_key = process_key(yml_data[_OUTPUT_KEY])
 
     return ProblemSpace(
         name=name,
+        run_key=run_key,
         instance_key=instance_key,
         solver_key=solver_key,
-        outputs=outputs,
+        output_key=output_key,
         filepath=filepath,
     )
 
