@@ -93,11 +93,11 @@ output_key:
     default: -1
     verbose_name: "Total Cuts Added"
     short_name: "tot_cuts"
-  avg_cbtime:
+  avg_cbtime_ms:
     default: -1.0
     verbose_name: "Average Callback Time (ms)"
     short_name: "cbtime"
-  avg_sptime:
+  avg_sptime_ms:
     default: -1.0
     verbose_name: "Average Shortest Path Time (ms)"
     short_name: "sptime"
