@@ -60,7 +60,7 @@ def process_key(data: dict[str, Any]) -> GroupKey:
     return key
 
 
-def read_ps_from_yaml(name: str) -> ProblemSpace:
+def read_pspace_from_yaml(name: str) -> ProblemSpace:
     """
     Factory for ProblemSpace:
         - in: problem name (e.g. testproblem, knapsack)
@@ -86,7 +86,7 @@ def read_ps_from_yaml(name: str) -> ProblemSpace:
     )
 
 
-def read_optispace() -> OptiSpace:
+def read_ospace() -> OptiSpace:
     """
     Factory for OptiSpace
     """

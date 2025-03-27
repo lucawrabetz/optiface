@@ -7,8 +7,8 @@ from optiface.core.optispace import (
     Feature,
     ProblemSpace,
     OptiSpace,
-    read_ps_from_yaml,
-    read_optispace,
+    read_pspace_from_yaml,
+    read_ospace,
 )
 
 ######### VERY IMPORTANT #########
@@ -24,9 +24,13 @@ from optiface.core.optispace import (
 
 ##################################
 
+_PSPACE_YAML = "problemspace.yaml"
+_EXPERIMENTS_DB = "experiments.db"
+
 _TEST_PSPACE_NAME: str = "testproblem"
-# TODO (maybe): constant below is not DRY with constants in optiface/core/optispace.py
-_TEST_PSPACE_PATH: Path = Path("space") / _TEST_PSPACE_NAME / "problemspace.yaml"
+# TODO: move problemspace.yaml and experiments.db to optiface/core/optispace.py
+_TEST_PSPACE_PATH: Path = Path("space") / _TEST_PSPACE_NAME / _PSPACE_YAML
+_TEST_PSPACEDB_PATH: Path = Path("space") / _TEST_PSPACE_NAME / _EXPERIMENTS_DB
 
 
 # TODO: unclear to me whether str is enough as solver "uuid" or if a solver id class is helpful
@@ -133,40 +137,34 @@ class TestProblemSpace:
     - note that this is testing the ProblemSpace class
     """
 
-    def test_problemspace_read(self):
+    def test_pspace_read(self):
         test_pspace = init_test_problem_space()
-        read_pspace = read_ps_from_yaml(name=_TEST_PSPACE_NAME)
+        read_pspace = read_pspace_from_yaml(name=_TEST_PSPACE_NAME)
         assert test_pspace == read_pspace
 
 
 class TestOptiSpace:
     """
-    - start with just a list of problem names
-    - list will be managed by PSM
-
-    Behaviors (init optispace):
-    - test problems exist
+    - start with just a list of problem names, managed by OSM
 
     Behaviors (ospace):
     - every problem name is correctly read, and filepath correctly constructed
-    - every feature has a name (str), default (str), verbose_name (str), short_name (str)
+    - every pspace:
+        - (problemspace.yaml) every feature has a name (str), default (str), verbose_name (str), short_name (str)
+        - (problemspace.yaml <-> experiments.db match)
     """
 
-    def test_init_optispace(self):
-        ospace: OptiSpace = read_optispace()
-        problems = set(ospace.problems)
-        assert _TEST_PSPACE_NAME in problems
-
     def test_ospace(self):
-        ospace: OptiSpace = read_optispace()
+        ospace: OptiSpace = read_ospace()
+        assert _TEST_PSPACE_NAME in set(ospace.problems)
 
         for problem in ospace.problems:
             # ProblemSpace is a BaseModel, so pydantic checks its types (right Pete?).
             # We will still assert some types for excessive testing.
 
-            # TODO: make sure that once you do PSM, switch current
+            # TODO: make sure that once you do OSM, switch current
             # ospace.current = problem
-            pspace: ProblemSpace = read_ps_from_yaml(problem)
+            pspace: ProblemSpace = read_pspace_from_yaml(problem)
             assert isinstance(pspace.name, str)
             assert pspace.name == problem
             assert isinstance(pspace.filepath, Path)
@@ -181,29 +179,28 @@ class TestOptiSpace:
                 assert len(f.short_name) > 0
 
 
-class TestPSM:
+class TestOSM:
     """
-    - write a top-level function (maybe even exported, in optiface/__init__.py to get a problem space)
-    - psm only needs to have a wizard to take input, and write functionality to yaml
-    - "switching" ps just means calling the top-level function to refresh or read a different one
-    Behaviors:
-    - switch between problem spaces as expected
-    """
+    - OSM is a user <-> optispace API: so pspace yamls can (eventually) stay locked and safe
+        - add new pspace
+        - add feature to pspace *
+        - remove feature from pspace *
+        - switch active pspace
+    - * includes dbmanager interaction (add or remove columns from databases)
 
-    def test_ps_switch(self):
-        assert True
+    Behaviors:
+    - add new pspace
+    - switch pspaces
+    """
 
     def test_ps_add(self):
-        """
-        add new problem
-            - add new problem with psm wizard
-            - check that problemspace.yaml file is correct
-            - check that optispace is updated (1 new problem name)
-        """
         assert True
 
-    def test_ps_add_feature(self):
-        """
-        add new feature to problemspace
-        """
+    def test_pspace_add_feature(self):
+        assert True
+
+    def test_pspace_remove_feature(self):
+        assert True
+
+    def test_pspace_switch(self):
         assert True
