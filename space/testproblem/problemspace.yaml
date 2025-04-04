@@ -1,43 +1,52 @@
 run_key:
   run_id:
     default: -1
-    verbose_name: "Run Id"
-    short_name: "run_id"
+    verbose_name: Run Id
+    short_name: run_id
+    feature_type: int
   timestamp_added:
-    default: "1996-09-11 00:00:00.000"
-    verbose_name: "Timestamp Added"
-    short_name: "ts_added"
+    default: 1996-09-11 00:00:00.000+02:00
+    verbose_name: Timestamp Added
+    short_name: ts_added
+    feature_type: int
   added_from:
-    default: "RUN"
-    verbose_name: "Added From"
-    short_name: "from"
+    default: RUN
+    verbose_name: Added From
+    short_name: from
+    feature_type: int
 
 instance_key:
   set_name:
-    default: "test"
-    verbose_name: "Set Name"
-    short_name: "s_n"
+    default: test
+    verbose_name: Set Name
+    short_name: s_n
+    feature_type: int
   n:
     default: -1
-    verbose_name: "Number of Items"
-    short_name: "n"
+    verbose_name: Number of Items
+    short_name: n
+    feature_type: int
   rep:
     default: 0
-    verbose_name: "Instance Rep"
-    short_name: "i_rep"
+    verbose_name: Instance Rep
+    short_name: i_rep
+    feature_type: int
 
 solver_key:
   solver:
-    default: "MySolver"
-    verbose_name: "Solver"
-    short_name: "sol"
+    default: MySolver
+    verbose_name: Solver
+    short_name: sol
+    feature_type: int
 
 output_key:
   objective:
     default: -1.0
-    verbose_name: "Objective"
-    short_name: "obj"
+    verbose_name: Objective
+    short_name: obj
+    feature_type: int
   time_ms:
     default: -1.0
-    verbose_name: "Running Time (ms)"
-    short_name: "t_ms"
+    verbose_name: Running Time (ms)
+    short_name: t_ms
+    feature_type: int

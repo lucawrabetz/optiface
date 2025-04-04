@@ -1,6 +1,7 @@
 from pathlib import Path
 import yaml
 from dataclasses import dataclass
+from datetime import datetime
 from pydantic import BaseModel
 
 from typing import Any, TypeAlias, TypeVar, Generic
@@ -14,6 +15,17 @@ _OUTPUT_KEY = "output_key"
 
 _SPACE: Path = Path("space")
 _PS_FILE = "problemspace.yaml"
+
+yaml_to_feature_type: dict[str, type] = {
+    "str": str,
+    "int": int,
+    "float": float,
+    "bool": bool,
+    "datetime": datetime,
+    # keeping as str for now, but would probably like to tighten:
+    #   - datetime
+    #   - enums
+}
 
 
 @dataclass
@@ -30,8 +42,28 @@ class Feature(Generic[T]):
     verbose_name: str
     short_name: str
 
+    # would this be better annotated as Type[T]?
+    # this actually is initialized as a string, and is then converted to a type in self.__post_init__
+    feature_type: type
+
+    def __post_init__(self):
+        # We can consider rolling our own exception (e.g. FeatureValidationError) as we go on here or using BaseModel and pydantic.ValidationError
+        # Keeping prototype as simple as possible with RuntimeError for now
+
+        if self.feature_type not in yaml_to_feature_type.keys():
+            raise RuntimeError(
+                f"Feature {self.name} has unknown type {self.feature_type}"
+            )
+
+        self.feature_type = yaml_to_feature_type[self.feature_type]
+
+        if not isinstance(self.default, self.feature_type):
+            raise RuntimeError(
+                f"Feature {self.name} has incorrect default type {type(self.default)}; it should be {self.feature_type}"
+            )
+
     def __str__(self) -> str:
-        return f"feature: {self.name}, type: {type(self.default)}, default: {self.default}, output names: '{self.verbose_name}', '{self.short_name}'"
+        return f"feature: {self.name}, feature_type: {self.feature_type}, default: {self.default}, type_of_default: {type(self.default)}, output names: '{self.verbose_name}', '{self.short_name}'"
 
 
 # 'Schema' type aliases
@@ -48,6 +80,17 @@ class ProblemSpace(BaseModel):
     solver_key: GroupKey
     output_key: GroupKey
     filepath: Path
+
+    def print_features(self):
+        print(f"pspace: {self.name}")
+        for feature in self.run_key.values():
+            print(feature)
+        for feature in self.instance_key.values():
+            print(feature)
+        for feature in self.solver_key.values():
+            print(feature)
+        for feature in self.output_key.values():
+            print(feature)
 
 
 @dataclass

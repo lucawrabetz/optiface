@@ -1,9 +1,11 @@
 import importlib
+import pytest
+
 from pathlib import Path
-
 from typing import Any
-
+from optiface.core.optidatetime import OptiDateTimeFactory
 from optiface.core.optispace import (
+    yaml_to_feature_type,
     Feature,
     ProblemSpace,
     OptiSpace,
@@ -31,6 +33,8 @@ _DEFAULT_PSPACE_NAME: str = "defaultproblem"
 # TODO: move problemspace.yaml and experiments.db to optiface/core/optispace.py
 _DEFAULT_PSPACE_PATH: Path = Path(_SPACE) / _DEFAULT_PSPACE_NAME / _PSPACE_YAML
 
+opti_dt = OptiDateTimeFactory()
+
 
 def init_data_feature_run_id() -> dict[str, Any]:
     return {
@@ -38,15 +42,17 @@ def init_data_feature_run_id() -> dict[str, Any]:
         "default": -1,
         "verbose_name": "Run Id",
         "short_name": "run_id",
+        "feature_type": "int",
     }
 
 
 def init_data_feature_timestamp_added() -> dict[str, Any]:
     return {
         "name": "timestamp_added",
-        "default": "1996-09-11 00:00:00.000",
+        "default": opti_dt.optidefault(),
         "verbose_name": "Timestamp Added",
         "short_name": "ts_added",
+        "feature_type": "datetime",
     }
 
 
@@ -56,6 +62,7 @@ def init_data_feature_added_from() -> dict[str, Any]:
         "default": "RUN",
         "verbose_name": "Added From",
         "short_name": "from",
+        "feature_type": "str",
     }
 
 
@@ -65,11 +72,28 @@ def init_data_feature_set_name() -> dict[str, Any]:
         "default": "test",
         "verbose_name": "Set Name",
         "short_name": "s_n",
+        "feature_type": "str",
     }
 
 
-def set_name_string() -> str:
-    return "feature: set_name, type: <class 'str'>, default: test, output names: 'Set Name', 's_n'"
+def init_data_feature_set_name_unknown_type() -> dict[str, Any]:
+    return {
+        "name": "set_name",
+        "default": "test",
+        "verbose_name": "Set Name",
+        "short_name": "s_n",
+        "feature_type": "what_is_this_type",
+    }
+
+
+def init_data_feature_set_name_mistyped() -> dict[str, Any]:
+    return {
+        "name": "set_name",
+        "default": "test",
+        "verbose_name": "Set Name",
+        "short_name": "s_n",
+        "feature_type": "int",
+    }
 
 
 def init_data_feature_n() -> dict[str, Any]:
@@ -78,6 +102,7 @@ def init_data_feature_n() -> dict[str, Any]:
         "default": -1,
         "verbose_name": "Number of Items",
         "short_name": "n",
+        "feature_type": "int",
     }
 
 
@@ -87,6 +112,7 @@ def init_data_feature_rep() -> dict[str, Any]:
         "default": 0,
         "verbose_name": "Instance Rep",
         "short_name": "i_rep",
+        "feature_type": "int",
     }
 
 
@@ -97,6 +123,7 @@ def init_data_feature_solver() -> dict[str, Any]:
         "default": "MySolver",
         "verbose_name": "Solver",
         "short_name": "sol",
+        "feature_type": "str",
     }
 
 
@@ -106,6 +133,7 @@ def init_data_feature_objective() -> dict[str, Any]:
         "default": -1.0,
         "verbose_name": "Objective",
         "short_name": "obj",
+        "feature_type": "float",
     }
 
 
@@ -115,6 +143,7 @@ def init_data_feature_time_ms() -> dict[str, Any]:
         "default": -1.0,
         "verbose_name": "Running Time (ms)",
         "short_name": "t_ms",
+        "feature_type": "float",
     }
 
 
@@ -148,7 +177,9 @@ class TestSetup:
 class TestFeature:
     """
     Behaviors:
-    - initializes a Feature as expected
+    - Feature class:
+         - (init) initialize feature as expected when passed data with type(default) == feature_type.
+         - (validation) raise (??) when passed data with type(default) != feature_type.
     """
 
     def test_feature_init(self):
@@ -158,14 +189,25 @@ class TestFeature:
         assert set_name.default == set_name_raw["default"]
         assert set_name.verbose_name == set_name_raw["verbose_name"]
         assert set_name.short_name == set_name_raw["short_name"]
-        assert str(set_name) == set_name_string()
+        assert (
+            set_name.feature_type == yaml_to_feature_type[set_name_raw["feature_type"]]
+        )
+
+    def test_feature_validation(self):
+        with pytest.raises(RuntimeError):
+            set_name_unknowntype_raw = init_data_feature_set_name_unknown_type()
+            set_name_unknowntype = Feature(**set_name_unknowntype_raw)
+
+        with pytest.raises(RuntimeError):
+            set_name_mistyped_raw = init_data_feature_set_name_mistyped()
+            set_name_mistyped = Feature(**set_name_mistyped_raw)
 
 
 class TestProblemSpace:
     """
     Behaviors:
-    - read a problem space as expected
-    - note that this is testing the ProblemSpace class
+    - ProblemSpace class:
+        - is read correctly from yaml, resulting in equivalent pspace instance to hardcoded test_pspace instance.
     """
 
     def test_defaultpspace_read(self):
@@ -181,7 +223,7 @@ class TestOptiSpace:
     Behaviors (ospace):
     - every problem name is correctly read, and filepath correctly constructed
     - every pspace:
-        - (problemspace.yaml) every feature has a name (str), default (str), verbose_name (str), short_name (str)
+        - (problemspace.yaml) every feature has a name (str), default (str), verbose_name (str), short_name (str), feature_type (type), default is of correct type
         - (problemspace.yaml <-> experiments.db match)
     """
 
@@ -200,10 +242,13 @@ class TestOptiSpace:
             assert pspace.name == problem
             assert isinstance(pspace.filepath, Path)
 
-            for f_name, f in pspace.instance_key.items():
-                assert isinstance(f_name, str)
-                assert f_name == f.name
-                assert f.default is not None
+            for feature_name, feature in pspace.instance_key.items():
+                assert isinstance(feature_name, str)
+                assert feature_name == feature.name
+                assert feature.feature_type is not None
+                assert isinstance(feature.feature_type, type)
+                assert feature.default is not None
+                assert isinstance(feature.default, feature.feature_type)
                 assert isinstance(f.verbose_name, str)
                 assert len(f.verbose_name) > 0
                 assert isinstance(f.short_name, str)
