@@ -39,7 +39,8 @@ opti_dt = OptiDateTimeFactory()
 def init_data_feature_run_id() -> dict[str, Any]:
     return {
         "name": "run_id",
-        "default": -1,
+        "required": True,
+        "default": None,
         "verbose_name": "Run Id",
         "short_name": "run_id",
         "feature_type": "int",
@@ -49,6 +50,7 @@ def init_data_feature_run_id() -> dict[str, Any]:
 def init_data_feature_timestamp_added() -> dict[str, Any]:
     return {
         "name": "timestamp_added",
+        "required": False,
         "default": opti_dt.optidefault(),
         "verbose_name": "Timestamp Added",
         "short_name": "ts_added",
@@ -59,6 +61,7 @@ def init_data_feature_timestamp_added() -> dict[str, Any]:
 def init_data_feature_added_from() -> dict[str, Any]:
     return {
         "name": "added_from",
+        "required": False,
         "default": "RUN",
         "verbose_name": "Added From",
         "short_name": "from",
@@ -69,7 +72,8 @@ def init_data_feature_added_from() -> dict[str, Any]:
 def init_data_feature_set_name() -> dict[str, Any]:
     return {
         "name": "set_name",
-        "default": "test",
+        "required": True,
+        "default": None,
         "verbose_name": "Set Name",
         "short_name": "s_n",
         "feature_type": "str",
@@ -79,27 +83,41 @@ def init_data_feature_set_name() -> dict[str, Any]:
 def init_data_feature_set_name_unknown_type() -> dict[str, Any]:
     return {
         "name": "set_name",
-        "default": "test",
+        "required": True,
+        "default": None,
         "verbose_name": "Set Name",
         "short_name": "s_n",
         "feature_type": "what_is_this_type",
     }
 
 
-def init_data_feature_set_name_mistyped() -> dict[str, Any]:
+def init_data_feature_timestamp_featuretype_int() -> dict[str, Any]:
     return {
-        "name": "set_name",
-        "default": "test",
-        "verbose_name": "Set Name",
-        "short_name": "s_n",
+        "name": "timestamp_added",
+        "required": False,
+        "default": opti_dt.optidefault(),
+        "verbose_name": "Timestamp Added",
+        "short_name": "ts_added",
         "feature_type": "int",
+    }
+
+
+def init_data_feature_timestamp_intdefault() -> dict[str, Any]:
+    return {
+        "name": "timestamp_added",
+        "required": False,
+        "default": 2,
+        "verbose_name": "Timestamp Added",
+        "short_name": "ts_added",
+        "feature_type": "datetime",
     }
 
 
 def init_data_feature_n() -> dict[str, Any]:
     return {
         "name": "n",
-        "default": -1,
+        "required": True,
+        "default": None,
         "verbose_name": "Number of Items",
         "short_name": "n",
         "feature_type": "int",
@@ -109,6 +127,7 @@ def init_data_feature_n() -> dict[str, Any]:
 def init_data_feature_rep() -> dict[str, Any]:
     return {
         "name": "rep",
+        "required": False,
         "default": 0,
         "verbose_name": "Instance Rep",
         "short_name": "i_rep",
@@ -120,7 +139,8 @@ def init_data_feature_rep() -> dict[str, Any]:
 def init_data_feature_solver() -> dict[str, Any]:
     return {
         "name": "solver",
-        "default": "MySolver",
+        "required": True,
+        "default": None,
         "verbose_name": "Solver",
         "short_name": "sol",
         "feature_type": "str",
@@ -130,7 +150,8 @@ def init_data_feature_solver() -> dict[str, Any]:
 def init_data_feature_objective() -> dict[str, Any]:
     return {
         "name": "objective",
-        "default": -1.0,
+        "required": True,
+        "default": None,
         "verbose_name": "Objective",
         "short_name": "obj",
         "feature_type": "float",
@@ -140,7 +161,8 @@ def init_data_feature_objective() -> dict[str, Any]:
 def init_data_feature_time_ms() -> dict[str, Any]:
     return {
         "name": "time_ms",
-        "default": -1.0,
+        "required": True,
+        "default": None,
         "verbose_name": "Running Time (ms)",
         "short_name": "t_ms",
         "feature_type": "float",
@@ -199,8 +221,14 @@ class TestFeature:
             set_name_unknowntype = Feature(**set_name_unknowntype_raw)
 
         with pytest.raises(RuntimeError):
-            set_name_mistyped_raw = init_data_feature_set_name_mistyped()
-            set_name_mistyped = Feature(**set_name_mistyped_raw)
+            timestamp_featuretype_int_raw = (
+                init_data_feature_timestamp_featuretype_int()
+            )
+            timestamp_featuretype_int = Feature(**timestamp_featuretype_int_raw)
+
+        with pytest.raises(RuntimeError):
+            timestamp_intdefault_raw = init_data_feature_timestamp_intdefault()
+            timestamp_intdefault = Feature(**timestamp_intdefault_raw)
 
 
 class TestProblemSpace:
@@ -249,10 +277,10 @@ class TestOptiSpace:
                 assert isinstance(feature.feature_type, type)
                 assert feature.default is not None
                 assert isinstance(feature.default, feature.feature_type)
-                assert isinstance(f.verbose_name, str)
-                assert len(f.verbose_name) > 0
-                assert isinstance(f.short_name, str)
-                assert len(f.short_name) > 0
+                assert isinstance(feature.verbose_name, str)
+                assert len(feature.verbose_name) > 0
+                assert isinstance(feature.short_name, str)
+                assert len(feature.short_name) > 0
 
 
 class TestOSM:

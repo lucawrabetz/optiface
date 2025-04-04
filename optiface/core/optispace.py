@@ -38,6 +38,7 @@ class Feature(Generic[T]):
     """
 
     name: str
+    required: bool
     default: T
     verbose_name: str
     short_name: str
@@ -57,7 +58,7 @@ class Feature(Generic[T]):
 
         self.feature_type = yaml_to_feature_type[self.feature_type]
 
-        if not isinstance(self.default, self.feature_type):
+        if not self.required and not isinstance(self.default, self.feature_type):
             raise RuntimeError(
                 f"Feature {self.name} has incorrect default type {type(self.default)}; it should be {self.feature_type}"
             )

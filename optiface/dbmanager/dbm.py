@@ -95,6 +95,7 @@ class DBM:
             if final_row is None:
                 final_row = _DEFAULT_ROW
 
+        # row_id, timestamp (now) are in the sql
         self.cur.execute(sql, final_row)
         self.con.commit()
         print(f"added one row to results table in problem {self.pspace.name}")
