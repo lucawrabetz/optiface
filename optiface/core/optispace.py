@@ -51,6 +51,7 @@ class Feature(Generic[T]):
         # We can consider rolling our own exception (e.g. FeatureValidationError) as we go on here or using BaseModel and pydantic.ValidationError
         # Keeping prototype as simple as possible with RuntimeError for now
 
+        # unknown type
         if self.feature_type not in yaml_to_feature_type.keys():
             raise RuntimeError(
                 f"Feature {self.name} has unknown type {self.feature_type}"
@@ -58,9 +59,34 @@ class Feature(Generic[T]):
 
         self.feature_type = yaml_to_feature_type[self.feature_type]
 
+        # required, but non-None default
+        if self.required and self.default is not None:
+            raise RuntimeError(
+                f"Feature {self.name} is required, it should not have the default it currently has: {self.default}"
+            )
+
+        # not required, but no default
+        if not self.required and self.default is None:
+            raise RuntimeError(
+                f"Feature {self.name} is not required, so it must have a default"
+            )
+
+        # wrong feature/default type
         if not self.required and not isinstance(self.default, self.feature_type):
             raise RuntimeError(
                 f"Feature {self.name} has incorrect default type {type(self.default)}; it should be {self.feature_type}"
+            )
+
+        # names not strings
+        if not isinstance(self.verbose_name, str):
+            raise RuntimeError(
+                f"Feature {self.name} has a verbose name of type {type(self.verbose_name)}"
+            )
+
+        # names not strings
+        if not isinstance(self.short_name, str):
+            raise RuntimeError(
+                f"Feature {self.name} has a verbose name of type {type(self.verbose_name)}"
             )
 
     def __str__(self) -> str:

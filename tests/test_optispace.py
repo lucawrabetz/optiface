@@ -91,6 +91,28 @@ def init_data_feature_set_name_unknown_type() -> dict[str, Any]:
     }
 
 
+def init_data_feature_set_name_withdefault() -> dict[str, Any]:
+    return {
+        "name": "set_name",
+        "required": True,
+        "default": "shouldntbehere",
+        "verbose_name": "Set Name",
+        "short_name": "s_n",
+        "feature_type": "str",
+    }
+
+
+def init_data_feature_timestamp_nodefault() -> dict[str, Any]:
+    return {
+        "name": "timestamp_added",
+        "required": False,
+        "default": None,
+        "verbose_name": "Timestamp Added",
+        "short_name": "ts_added",
+        "feature_type": "int",
+    }
+
+
 def init_data_feature_timestamp_featuretype_int() -> dict[str, Any]:
     return {
         "name": "timestamp_added",
@@ -169,6 +191,28 @@ def init_data_feature_time_ms() -> dict[str, Any]:
     }
 
 
+def init_data_feature_time_ms_verbosenameint() -> dict[str, Any]:
+    return {
+        "name": "time_ms",
+        "required": True,
+        "default": None,
+        "verbose_name": 1,
+        "short_name": "t_ms",
+        "feature_type": "float",
+    }
+
+
+def init_data_feature_time_ms_shortnameint() -> dict[str, Any]:
+    return {
+        "name": "time_ms",
+        "required": True,
+        "default": None,
+        "verbose_name": "Running Time (ms)",
+        "short_name": 1,
+        "feature_type": "float",
+    }
+
+
 def init_default_problem_space() -> ProblemSpace:
     return ProblemSpace(
         name=_DEFAULT_PSPACE_NAME,
@@ -201,7 +245,12 @@ class TestFeature:
     Behaviors:
     - Feature class:
          - (init) initialize feature as expected when passed data with type(default) == feature_type.
-         - (validation) raise (??) when passed data with type(default) != feature_type.
+         - (validation)
+            - raise (??) when passed data with an unknown type.
+            - raise (??) when passed data with required == True and default != null.
+            - raise (??) when passed data with required == False and default == null.
+            - raise (??) when passed data with required == False and type(default) != feature_type.
+            - raise (??) when passed data with type(short_name) != str or type(verbose_name) != str.
     """
 
     def test_feature_init(self):
@@ -216,19 +265,42 @@ class TestFeature:
         )
 
     def test_feature_validation(self):
+        # unknown type
         with pytest.raises(RuntimeError):
             set_name_unknowntype_raw = init_data_feature_set_name_unknown_type()
             set_name_unknowntype = Feature(**set_name_unknowntype_raw)
 
+        # required, but non-None default
+        with pytest.raises(RuntimeError):
+            set_name_with_default_raw = init_data_feature_set_name_withdefault()
+            set_name_with_default = Feature(**set_name_with_default_raw)
+
+        # not required, but no default
+        with pytest.raises(RuntimeError):
+            timestamp_nodefault_raw = init_data_feature_timestamp_nodefault()
+            timestamp_nodefault = Feature(**timestamp_nodefault_raw)
+
+        # wrong feature type
         with pytest.raises(RuntimeError):
             timestamp_featuretype_int_raw = (
                 init_data_feature_timestamp_featuretype_int()
             )
             timestamp_featuretype_int = Feature(**timestamp_featuretype_int_raw)
 
+        # wrong default type
         with pytest.raises(RuntimeError):
             timestamp_intdefault_raw = init_data_feature_timestamp_intdefault()
             timestamp_intdefault = Feature(**timestamp_intdefault_raw)
+
+        # non-string verbose name
+        with pytest.raises(RuntimeError):
+            time_ms_verboseint_raw = init_data_feature_time_ms_verbosenameint()
+            time_ms_verboseint = Feature(**time_ms_verboseint_raw)
+
+        # non-string short name
+        with pytest.raises(RuntimeError):
+            time_ms_shortint_raw = init_data_feature_time_ms_shortnameint()
+            time_ms_shortint = Feature(**time_ms_shortint_raw)
 
 
 class TestProblemSpace:
@@ -236,6 +308,7 @@ class TestProblemSpace:
     Behaviors:
     - ProblemSpace class:
         - is read correctly from yaml, resulting in equivalent pspace instance to hardcoded test_pspace instance.
+        - all features pass validation checks
     """
 
     def test_defaultpspace_read(self):
@@ -251,7 +324,8 @@ class TestOptiSpace:
     Behaviors (ospace):
     - every problem name is correctly read, and filepath correctly constructed
     - every pspace:
-        - (problemspace.yaml) every feature has a name (str), default (str), verbose_name (str), short_name (str), feature_type (type), default is of correct type
+        - (problemspace.yaml) every feature passes validation, some sanity checks for now
+                (covered in TestFeature.test_validation)
         - (problemspace.yaml <-> experiments.db match)
     """
 
@@ -274,12 +348,7 @@ class TestOptiSpace:
                 assert isinstance(feature_name, str)
                 assert feature_name == feature.name
                 assert feature.feature_type is not None
-                assert isinstance(feature.feature_type, type)
-                assert feature.default is not None
-                assert isinstance(feature.default, feature.feature_type)
-                assert isinstance(feature.verbose_name, str)
                 assert len(feature.verbose_name) > 0
-                assert isinstance(feature.short_name, str)
                 assert len(feature.short_name) > 0
 
 

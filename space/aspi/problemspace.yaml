@@ -1,67 +1,82 @@
 run_key:
   run_id:
-    default: -1
+    required: True
+    default: null
     verbose_name: Run Id
     short_name: run_id
     feature_type: int
   timestamp_added:
-    default: 1996-09-11 00:00:00.000
+    required: False
+    default: 1996-09-11 00:00:00.000+02:00
     verbose_name: Timestamp Added
     short_name: ts_added
     feature_type: datetime
   added_from:
+    required: False
     default: RUN
     verbose_name: Added From
     short_name: from
     feature_type: str
 
 instance_key:
+  # more thoughts here, potentially answering derived column potentially as well:
+  # TODO: instances table, just a foreign key in every row in results table
   set_name:
-    default: test
+    required: True
+    default: null
     verbose_name: Set Name
     short_name: s_n
     feature_type: str
   instance_name: # derived column, see default
-    default: test_and_more # plus the rest of the instance key
+    required: True
+    default: null
     verbose_name: Instance Name
     short_name: i_n
     feature_type: str
   nodes:
-    default: -1
+    required: True
+    default: null
     verbose_name: Nodes
     short_name: n
     feature_type: int
   arcs:
-    default: -1
+    required: True
+    default: null
     verbose_name: Arcs
     short_name: m
     feature_type: int
   k_zero:
-    default: -1
+    required: True
+    default: null
     verbose_name: Arcs
     short_name: m
     feature_type: int
   density: # derived column, see default
-    default: 0.0 # m / (n (n - 1))
+    required: True
+    default: null # m / (n (n - 1))
     verbose_name: Density
     short_name: den
     feature_type: float
   scenarios:
-    default: 1
+    required: True
+    default: null
     verbose_name: Scenarios
     short_name: p
     feature_type: int
   budget:
-    default: 1
+    required: True
+    default: null
     verbose_name: Budget
     short_name: r_0
     feature_type: int
   policies:
-    default: 1
+    required: True
+    default: null
     verbose_name: Policies
     short_name: k
     feature_type: int
   rep:
+    required: False
     default: 0
     verbose_name: Instance Rep
     short_name: i_rep
@@ -69,11 +84,13 @@ instance_key:
 
 solver_key:
   solver:
-    default: MIP
+    required: True
+    default: null
     verbose_name: Solver
     short_name: sol
     feature_type: str
   subsolver:
+    required: False
     default: N_A
     verbose_name: SubSolver
     short_name: sub
@@ -81,61 +98,73 @@ solver_key:
 
 output_key:
   objective:
-    default: -1.0
+    required: True
+    default: null
     verbose_name: Objective
     short_name: obj
     feature_type: float
   time_ms:
-    default: -1.0
+    required: True
+    default: null
     verbose_name: Running Time (ms)
     short_name: t_ms
     feature_type: float
   unbounded:
-    default: False
+    required: True
+    default: null
     verbose_name: Unbounded
     short_name: unbnd
     feature_type: bool
   optimal:
-    default: False
+    required: True
+    default: null
     verbose_name: Optimal
     short_name: opt
     feature_type: bool
   gap:
-    default: 0.0
+    required: True
+    default: null
     verbose_name: Optimality Gap
     short_name: gap
     feature_type: float
   cuts_rounds:
+    required: False
     default: -1
     verbose_name: Rounds of Cuts
     short_name: cuts
     feature_type: int
   cuts_added:
+    required: False
     default: -1
     verbose_name: Total Cuts Added
     short_name: tot_cuts
     feature_type: int
   avg_cbtime_ms:
+    required: False
     default: -1.0
     verbose_name: Average Callback Time (ms)
     short_name: cbtime
     feature_type: float
   avg_sptime_ms:
+    required: False
     default: -1.0
     verbose_name: Average Shortest Path Time (ms)
     short_name: sptime
     feature_type: float
   partition:
-    default: 0
+    required: True
+    default: null
     verbose_name: Partition
     short_name: part
     feature_type: int
   m_sym:
+    required: False
     default: -1
     verbose_name: Manual Symmetry Detection
     short_name: m_sym
     feature_type: int
   g_sym:
+    required: False
     default: -1
     verbose_name: Gurobi Symmetry Detection
     short_name: g_sym
