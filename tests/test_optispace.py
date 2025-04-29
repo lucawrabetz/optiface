@@ -303,6 +303,18 @@ class TestFeature:
             time_ms_shortint = Feature(**time_ms_shortint_raw)
 
 
+def correct_default_row_one_empty() -> list[Any]:
+    return ["defaultset", 1, None, "MIP", 100, 100]
+
+
+def incorrect_types_default_row() -> list[Any]:
+    return ["defaultset", "one", None, "MIP", 100, 100]
+
+
+def incorrect_missing_required_default_row() -> list[Any]:
+    return ["defaultset", None, None, "MIP", 100, 100]
+
+
 class TestProblemSpace:
     """
     Behaviors:
@@ -315,6 +327,30 @@ class TestProblemSpace:
         test_pspace = init_default_problem_space()
         read_pspace = read_pspace_from_yaml(name=_DEFAULT_PSPACE_NAME)
         assert test_pspace == read_pspace
+
+    def test_validate_correct_row(self):
+        default_pspace = init_default_problem_space()
+        default_row = correct_default_row_one_empty()
+        valid = default_pspace.validate_row(default_row)
+
+        assert valid
+        assert default_row[2] == default_pspace.instance_key["rep"].default
+
+    def test_validate_row_incorrect_types(self):
+        default_pspace = init_default_problem_space()
+        default_row = incorrect_types_default_row()
+
+        valid = default_pspace.validate_row(default_row)
+
+        assert not valid
+
+    def test_validate_row_missing_required(self):
+        default_pspace = init_default_problem_space()
+        default_row = incorrect_missing_required_default_row()
+
+        valid = default_pspace.validate_row(default_row)
+
+        assert not valid
 
 
 class TestOptiSpace:

@@ -2,9 +2,10 @@ from pathlib import Path
 import yaml
 from dataclasses import dataclass
 from datetime import datetime
+from collections import OrderedDict
 from pydantic import BaseModel
 
-from typing import Any, TypeAlias, TypeVar, Generic
+from typing import Any, TypeAlias, TypeVar, Generic, Callable
 
 T = TypeVar("T")
 
@@ -23,8 +24,36 @@ yaml_to_feature_type: dict[str, type] = {
     "bool": bool,
     "datetime": datetime,
     # keeping as str for now, but would probably like to tighten:
-    #   - datetime
     #   - enums
+}
+
+
+def validate_str(s: str) -> bool:
+    return isinstance(s, str)
+
+
+def validate_int(x: int) -> bool:
+    return isinstance(x, int)
+
+
+def validate_float(x: float) -> bool:
+    return isinstance(x, int) or isinstance(x, float)
+
+
+def validate_bool(b: bool) -> bool:
+    return isinstance(b, bool)
+
+
+def validate_datetime(d: datetime) -> bool:
+    return isinstance(d, datetime)
+
+
+validate_allowed_types: dict[type, Callable[[Any], bool]] = {
+    str: validate_str,
+    int: validate_int,
+    float: validate_float,
+    bool: validate_bool,
+    datetime: validate_datetime,
 }
 
 
@@ -90,11 +119,11 @@ class Feature(Generic[T]):
             )
 
     def __str__(self) -> str:
-        return f"feature: {self.name}, feature_type: {self.feature_type}, default: {self.default}, type_of_default: {type(self.default)}, output names: '{self.verbose_name}', '{self.short_name}'"
+        return f"feature: {self.name}, feature_type: {self.feature_type}, required: {self.required}, default: {self.default}, output names: '{self.verbose_name}', '{self.short_name}'"
 
 
 # 'Schema' type aliases
-GroupKey: TypeAlias = dict[str, Feature]
+GroupKey: TypeAlias = OrderedDict[str, Feature]
 
 # 'Row' type aliases
 FeatureValuePair: TypeAlias = tuple[Feature, Any]
@@ -119,6 +148,42 @@ class ProblemSpace(BaseModel):
         for feature in self.output_key.values():
             print(feature)
 
+    def full_row_features_without_runkey(self) -> list[Feature]:
+        return (
+            list(self.instance_key.values())
+            + list(self.solver_key.values())
+            + list(self.output_key.values())
+        )
+
+    def validate_row(self, row: list[Any]) -> bool:
+        # for now returns False if any incorrect cols encountered
+        # replaces empty values with defaults in-place
+        # empty value is recognized as None, not actually missing features in the list:
+
+        features = self.full_row_features_without_runkey()
+
+        if len(row) < len(features):
+            print(f"not valid: incomplete row")
+            return False
+
+        for i, value in enumerate(row):
+
+            if value:
+                if not validate_allowed_types[features[i].feature_type](value):
+                    print(
+                        f"type not valid for feature {features[i].name}, value is: {value}"
+                    )
+                    return False
+
+            else:
+                if features[i].required:
+                    print(f"not valid: missing {features[i].name} which is required")
+                    return False
+                else:
+                    row[i] = features[i].default
+
+        return True
+
 
 @dataclass
 class OptiSpace:
@@ -127,7 +192,8 @@ class OptiSpace:
 
 
 def process_key(data: dict[str, Any]) -> GroupKey:
-    key: GroupKey = dict()
+    key: GroupKey = OrderedDict()
+
     for feature_name, feature_data in data.items():
         data_copy = feature_data
         data_copy["name"] = feature_name
@@ -143,10 +209,6 @@ def read_pspace_from_yaml(name: str) -> ProblemSpace:
         - out: ProblemSpace object configured from space/<name>/problemspace.yaml
     """
     filepath: Path = Path(_SPACE) / name / _PS_FILE
-    run_key: GroupKey = dict()
-    instance_key: GroupKey = dict()
-    solver_key: GroupKey = dict()
-    outputs: GroupKey = dict()
 
     with open(filepath, "r") as file:
         yml_data = yaml.safe_load(file)

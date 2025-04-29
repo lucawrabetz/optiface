@@ -1,4 +1,5 @@
 import sqlite3
+import pandas as pd
 
 from typing import Any
 
@@ -54,6 +55,8 @@ _ASPI_TEST_ROW = (
     -1,
 )
 
+_ADDED_FROM_CSV: str = "CSV"
+
 
 class DBM:
     def __init__(self, pspace):
@@ -76,14 +79,11 @@ class DBM:
             # switch for based on pspace
             self.create_results_table()
             print("created results table")
-        else:
-            print("results table exists already")
-
-        self.results_table_head()
 
     def insert_single_row(self, row):
         # TODO: start to work on some "interactive" error handling here
         # user can handle migration errors as rows are added one by one
+        # TODO: should (can) we deduplicate here, or when using data?
         sql: str = ""
         final_row: tuple[Any] = row
         if self.pspace.name == "aspi":
@@ -100,8 +100,19 @@ class DBM:
         self.con.commit()
         print(f"added one row to results table in problem {self.pspace.name}")
 
+    def insert_rows(self, df):
+        for _, csv_row in df.iterrows():
+            csv_row = list(csv_row)
+            valid = self.pspace.validate_row(csv_row)
+            row = [_ADDED_FROM_CSV]
+            row.extend(csv_row)
+            # validate
+            if not valid:
+                print(f"skipping non-valid row: {row}")
+            else:
+                self.insert_single_row(tuple(row))
+
     def results_table_head(self):
         res = self.cur.execute(_SQL_GETALL_RESULTS)
-        rows = res.fetchmany(size=min(10, res.arraysize))
-        for i in rows:
-            print(i)
+        row = res.fetchone()
+        print(row)
