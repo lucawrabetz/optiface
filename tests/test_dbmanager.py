@@ -14,13 +14,13 @@ class TestDBM:
         - create table if it does not exist
         - check correctness of columns against pspace
         - check it is the only table
+        - add new column to database
+            - new insert with full row (including new column) is successful
+            - query of pre-migration row has correct default for column
     - insert row of data
         - when row is complete -> row is there when queried
         - when row has missing values -> correct defaults are used
         - when row has incorrect columns -> error
-    - add new column to database
-        - new insert with full row (including new column) is successful
-        - query of pre-migration row has correct default for column
     """
 
     pass
