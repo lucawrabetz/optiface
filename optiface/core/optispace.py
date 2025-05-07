@@ -1,11 +1,11 @@
 from pathlib import Path
 import yaml
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 from collections import OrderedDict
 from pydantic import BaseModel
 
-from typing import Any, TypeAlias, TypeVar, Generic, Callable
+from typing import Any, TypeAlias, TypeVar, Generic, Callable, Type
 
 T = TypeVar("T")
 
@@ -74,19 +74,20 @@ class Feature(Generic[T]):
 
     # would this be better annotated as Type[T]?
     # this actually is initialized as a string, and is then converted to a type in self.__post_init__
-    feature_type: type
+    feature_type_str: str
+    feature_type: Type[T] = field(init=False)
 
     def __post_init__(self):
         # We can consider rolling our own exception (e.g. FeatureValidationError) as we go on here or using BaseModel and pydantic.ValidationError
         # Keeping prototype as simple as possible with RuntimeError for now
 
         # unknown type
-        if self.feature_type not in yaml_to_feature_type.keys():
+        if self.feature_type_str not in yaml_to_feature_type.keys():
             raise RuntimeError(
-                f"Feature {self.name} has unknown type {self.feature_type}"
+                f"Feature {self.name} has unknown type {self.feature_type_str}"
             )
 
-        self.feature_type = yaml_to_feature_type[self.feature_type]
+        self.feature_type = yaml_to_feature_type[self.feature_type_str]
 
         # required, but non-None default
         if self.required and self.default is not None:
@@ -167,7 +168,6 @@ class ProblemSpace(BaseModel):
             return False
 
         for i, value in enumerate(row):
-
             if value:
                 if not validate_allowed_types[features[i].feature_type](value):
                     print(

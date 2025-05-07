@@ -19,6 +19,8 @@ class OptiDateTimeFactory:
     _MILAN_TZ = ZoneInfo("Europe/Rome")
 
     _PETEBYEAR: int = 1997
+    _PETEBMONTH: int = 9
+    _PETEBDAY: int = 6
     _NY_TZ = ZoneInfo("America/New_York")
 
     def sqlite_to_py(self, dt: str) -> datetime:
@@ -53,8 +55,12 @@ class OptiDateTimeFactory:
         )
 
     def optipete(self) -> datetime:
-        return self.optiluca()
-        # return datetime(year=self._PETEBYEAR, month=, day=, tzinfo=self._NY_TZ)
+        return datetime(
+            year=self._PETEBYEAR,
+            month=self._PETEBMONTH,
+            day=self._PETEBDAY,
+            tzinfo=self._NY_TZ,
+        )
 
 
 if __name__ == "__main__":

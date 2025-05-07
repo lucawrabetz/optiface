@@ -4,19 +4,19 @@ run_key:
     default: null
     verbose_name: Run Id
     short_name: run_id
-    feature_type: int
+    feature_type_str: int
   timestamp_added:
     required: False
     default: 1996-09-11 00:00:00.000+02:00
     verbose_name: Timestamp Added
     short_name: ts_added
-    feature_type: datetime
+    feature_type_str: datetime
   added_from:
     required: False
     default: RUN
     verbose_name: Added From
     short_name: from
-    feature_type: str
+    feature_type_str: str
 
 instance_key:
   set_name:
@@ -24,19 +24,19 @@ instance_key:
     default: null
     verbose_name: Set Name
     short_name: s_n
-    feature_type: str
+    feature_type_str: str
   n:
     required: True
     default: null
     verbose_name: Number of Items
     short_name: n
-    feature_type: int
+    feature_type_str: int
   rep:
     required: False
     default: 0
     verbose_name: Instance Rep
     short_name: i_rep
-    feature_type: int
+    feature_type_str: int
 
 solver_key:
   solver:
@@ -44,7 +44,7 @@ solver_key:
     default: null
     verbose_name: Solver
     short_name: sol
-    feature_type: str
+    feature_type_str: str
 
 output_key:
   objective:
@@ -52,10 +52,10 @@ output_key:
     default: null
     verbose_name: Objective
     short_name: obj
-    feature_type: float
+    feature_type_str: float
   time_ms:
     required: True
     default: null
     verbose_name: Running Time (ms)
     short_name: t_ms
-    feature_type: float
+    feature_type_str: float

@@ -43,7 +43,7 @@ def init_data_feature_run_id() -> dict[str, Any]:
         "default": None,
         "verbose_name": "Run Id",
         "short_name": "run_id",
-        "feature_type": "int",
+        "feature_type_str": "int",
     }
 
 
@@ -54,7 +54,7 @@ def init_data_feature_timestamp_added() -> dict[str, Any]:
         "default": opti_dt.optidefault(),
         "verbose_name": "Timestamp Added",
         "short_name": "ts_added",
-        "feature_type": "datetime",
+        "feature_type_str": "datetime",
     }
 
 
@@ -65,7 +65,7 @@ def init_data_feature_added_from() -> dict[str, Any]:
         "default": "RUN",
         "verbose_name": "Added From",
         "short_name": "from",
-        "feature_type": "str",
+        "feature_type_str": "str",
     }
 
 
@@ -76,7 +76,7 @@ def init_data_feature_set_name() -> dict[str, Any]:
         "default": None,
         "verbose_name": "Set Name",
         "short_name": "s_n",
-        "feature_type": "str",
+        "feature_type_str": "str",
     }
 
 
@@ -87,7 +87,7 @@ def init_data_feature_set_name_unknown_type() -> dict[str, Any]:
         "default": None,
         "verbose_name": "Set Name",
         "short_name": "s_n",
-        "feature_type": "what_is_this_type",
+        "feature_type_str": "what_is_this_type",
     }
 
 
@@ -98,7 +98,7 @@ def init_data_feature_set_name_withdefault() -> dict[str, Any]:
         "default": "shouldntbehere",
         "verbose_name": "Set Name",
         "short_name": "s_n",
-        "feature_type": "str",
+        "feature_type_str": "str",
     }
 
 
@@ -109,7 +109,7 @@ def init_data_feature_timestamp_nodefault() -> dict[str, Any]:
         "default": None,
         "verbose_name": "Timestamp Added",
         "short_name": "ts_added",
-        "feature_type": "int",
+        "feature_type_str": "int",
     }
 
 
@@ -120,7 +120,7 @@ def init_data_feature_timestamp_featuretype_int() -> dict[str, Any]:
         "default": opti_dt.optidefault(),
         "verbose_name": "Timestamp Added",
         "short_name": "ts_added",
-        "feature_type": "int",
+        "feature_type_str": "int",
     }
 
 
@@ -131,7 +131,7 @@ def init_data_feature_timestamp_intdefault() -> dict[str, Any]:
         "default": 2,
         "verbose_name": "Timestamp Added",
         "short_name": "ts_added",
-        "feature_type": "datetime",
+        "feature_type_str": "datetime",
     }
 
 
@@ -142,7 +142,7 @@ def init_data_feature_n() -> dict[str, Any]:
         "default": None,
         "verbose_name": "Number of Items",
         "short_name": "n",
-        "feature_type": "int",
+        "feature_type_str": "int",
     }
 
 
@@ -153,7 +153,7 @@ def init_data_feature_rep() -> dict[str, Any]:
         "default": 0,
         "verbose_name": "Instance Rep",
         "short_name": "i_rep",
-        "feature_type": "int",
+        "feature_type_str": "int",
     }
 
 
@@ -165,7 +165,7 @@ def init_data_feature_solver() -> dict[str, Any]:
         "default": None,
         "verbose_name": "Solver",
         "short_name": "sol",
-        "feature_type": "str",
+        "feature_type_str": "str",
     }
 
 
@@ -176,7 +176,7 @@ def init_data_feature_objective() -> dict[str, Any]:
         "default": None,
         "verbose_name": "Objective",
         "short_name": "obj",
-        "feature_type": "float",
+        "feature_type_str": "float",
     }
 
 
@@ -187,7 +187,7 @@ def init_data_feature_time_ms() -> dict[str, Any]:
         "default": None,
         "verbose_name": "Running Time (ms)",
         "short_name": "t_ms",
-        "feature_type": "float",
+        "feature_type_str": "float",
     }
 
 
@@ -198,7 +198,7 @@ def init_data_feature_time_ms_verbosenameint() -> dict[str, Any]:
         "default": None,
         "verbose_name": 1,
         "short_name": "t_ms",
-        "feature_type": "float",
+        "feature_type_str": "float",
     }
 
 
@@ -209,7 +209,7 @@ def init_data_feature_time_ms_shortnameint() -> dict[str, Any]:
         "default": None,
         "verbose_name": "Running Time (ms)",
         "short_name": 1,
-        "feature_type": "float",
+        "feature_type_str": "float",
     }
 
 
@@ -244,12 +244,12 @@ class TestFeature:
     """
     Behaviors:
     - Feature class:
-         - (init) initialize feature as expected when passed data with type(default) == feature_type.
+         - (init) initialize feature as expected when passed data with type(default) == feature_type_str.
          - (validation)
             - raise (??) when passed data with an unknown type.
             - raise (??) when passed data with required == True and default != null.
             - raise (??) when passed data with required == False and default == null.
-            - raise (??) when passed data with required == False and type(default) != feature_type.
+            - raise (??) when passed data with required == False and type(default) != yaml_to_feature_type[feature_type_str].
             - raise (??) when passed data with type(short_name) != str or type(verbose_name) != str.
     """
 
@@ -261,7 +261,8 @@ class TestFeature:
         assert set_name.verbose_name == set_name_raw["verbose_name"]
         assert set_name.short_name == set_name_raw["short_name"]
         assert (
-            set_name.feature_type == yaml_to_feature_type[set_name_raw["feature_type"]]
+            set_name.feature_type
+            == yaml_to_feature_type[set_name_raw["feature_type_str"]]
         )
 
     def test_feature_validation(self):

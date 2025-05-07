@@ -13,8 +13,8 @@ def main():
     parser = argparse.ArgumentParser(
         prog="OptiFace csv migrator",
     )
-    parser.add_argument("problem")
-    parser.add_argument("csv")
+    parser.add_argument("problem", type=str, required=True)
+    parser.add_argument("csv", type=str, required=True)
     args = parser.parse_args()
     pname = args.problem
     csv_path = args.csv
