@@ -20,6 +20,7 @@ pydantic = "^2.10.6"
 pyyaml = "^6.0.2"
 pysqlite3 = "^0.5.4"
 pandas = "^2.2.3"
+sqlalchemy = "^2.0.0"
 
 
 [build-system]

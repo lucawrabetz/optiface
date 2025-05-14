@@ -7,9 +7,20 @@ from pydantic import BaseModel
 
 from typing import Any, TypeAlias, TypeVar, Generic, Callable, Type
 
+from optiface.core.featuredata import (
+    init_data_feature_run_id,
+    init_data_feature_timestamp_added,
+    init_data_feature_added_from,
+)
+
 T = TypeVar("T")
 
-_RUN_KEY = "run_key"
+_RUN_KEY_DATA = {
+    "run_id": init_data_feature_run_id(),
+    "timestamp_added": init_data_feature_timestamp_added(),
+    "added_from": init_data_feature_added_from(),
+}
+
 _INSTANCE_KEY = "instance_key"
 _SOLVER_KEY = "solver_key"
 _OUTPUT_KEY = "output_key"
@@ -212,7 +223,7 @@ def read_pspace_from_yaml(name: str) -> ProblemSpace:
 
     with open(filepath, "r") as file:
         yml_data = yaml.safe_load(file)
-        run_key = process_key(yml_data[_RUN_KEY])
+        run_key = process_key(_RUN_KEY_DATA)
         instance_key = process_key(yml_data[_INSTANCE_KEY])
         solver_key = process_key(yml_data[_SOLVER_KEY])
         output_key = process_key(yml_data[_OUTPUT_KEY])
