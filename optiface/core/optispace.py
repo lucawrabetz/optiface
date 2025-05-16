@@ -1,4 +1,5 @@
 from pathlib import Path
+from sqlalchemy.util import OrderedProperties
 import yaml
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -171,27 +172,29 @@ class ProblemSpace(BaseModel):
         # for now returns False if any incorrect cols encountered
         # replaces empty values with defaults in-place
         # empty value is recognized as None, not actually missing features in the list:
+        # THIS DOES NOT INCLUDE THE RUN_KEY
 
         features = self.full_row_features_without_runkey()
 
         if len(row) < len(features):
             print(f"not valid: incomplete row")
+            print([f.name for f in features])
+            print(row)
             return False
 
         for i, value in enumerate(row):
-            if value:
-                if not validate_allowed_types[features[i].feature_type](value):
-                    print(
-                        f"type not valid for feature {features[i].name}, value is: {value}"
-                    )
-                    return False
+            if not validate_allowed_types[features[i].feature_type](value):
+                print(
+                    f"type not valid for feature {features[i].name}, value is: {value}"
+                )
+                return False
 
-            else:
-                if features[i].required:
-                    print(f"not valid: missing {features[i].name} which is required")
-                    return False
-                else:
-                    row[i] = features[i].default
+        # TODO: we can't actually fully validate the row like this, we need row to arrive as a dict
+        # if features[i].required:
+        #     print(f"not valid: missing {features[i].name} which is required")
+        #     return False
+        # else:
+        #     row[i] = features[i].default
 
         return True
 

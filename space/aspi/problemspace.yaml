@@ -136,7 +136,7 @@ output_key:
     default: null
     verbose_name: Partition
     short_name: part
-    feature_type_str: int
+    feature_type_str: str
   m_sym:
     required: False
     default: -1

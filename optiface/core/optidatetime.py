@@ -26,6 +26,7 @@ class OptiDateTimeFactory:
     def sqlite_to_py(self, dt: str) -> datetime:
         return self.optiluca()
 
+    # just for raw pysqlite, will leave in case we need for testing, sqlalchemy wants datetime objects
     def py_to_sqlite(self, dt: datetime) -> str:
         dt_utc = dt.astimezone(timezone.utc)
         return dt_utc.strftime(self._STRF_ISO8061)

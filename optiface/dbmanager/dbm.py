@@ -1,12 +1,34 @@
-import sqlite3
-import pandas as pd
-
+from collections import OrderedDict
+from datetime import datetime
 from typing import Any
 
 from pathlib import Path
 
+from pandas import DataFrame
+from sqlalchemy import Engine, create_engine, engine
+from sqlalchemy import (
+    MetaData,
+    Table,
+    Column,
+    Integer,
+    String,
+    Float,
+    DateTime,
+    Boolean,
+    Inspector,
+    inspect,
+    insert,
+)
+
 from optiface.core.optispace import (
     ProblemSpace,
+    Feature,
+)
+
+from optiface.core.featuredata import (
+    init_data_feature_run_id,
+    init_data_feature_timestamp_added,
+    init_data_feature_added_from,
 )
 
 from optiface.core.optidatetime import OptiDateTimeFactory
@@ -14,20 +36,10 @@ from optiface.core.optidatetime import OptiDateTimeFactory
 # TODO: refactor to SQL query file
 # TODO: (CREATE TABLE) to init new table based on pspace config (i.e. columns)
 # TODO: (INSERT INTO) inserting columns using pspace config
+_SQLITE_PREF = "sqlite+pysqlite:///"
 _SPACE = "space"
 _EXPERIMENTS_DB = "experiments.db"
-
-_SQL_GETSCHEMA = "SELECT name FROM sqlite_master"
-
-_SQL_CREATE_RESULTS_DEFAULT = "CREATE TABLE results (run_id INTEGER PRIMARY KEY ASC,timestamp_added TEXT,added_from TEXT,set_name TEXT,nodes INTEGER,rep INTEGER,solver TEXT,objective REAL,time_ms REAL)"
-_SQL_CREATE_RESULTS_ASPI = "CREATE TABLE results (run_id INTEGER PRIMARY KEY ASC, timestamp_added TEXT, added_from TEXT, set_name TEXT, nodes INTEGER, arcs INTEGER, k_zero INTEGER, density REAL, scenarios INTEGER, budget INTEGER, policies INTEGER, rep INTEGER, solver TEXT, subsolver TEXT, objective REAL, time_ms REAL, unbounded INTEGER, optimal INTEGER, gap REAL, cuts_rounds INTEGER, cuts_added INTEGER, avg_cbtime_ms REAL, avg_sptime_ms REAL, partition TEXT, m_sym INTEGER, g_sym INTEGER)"
-_SQL_CREATE_RESULTS_PSPACE = "CREATE TABLE results (?)"
-
-_SQL_GETALL_RESULTS = "SELECT * FROM results"
-
-_SQL_INSERT_SINGLE_RESULTS_ROW = "INSERT INTO RESULTS (timestamp_added, added_from, set_name, n, rep, solver, objective, time_ms) VALUES(?, ?, ?, ?, ?, ?, ?, ?)"
-_SQL_INSERT_SINGLE_ASPIRESULTS_ROW = "INSERT INTO RESULTS (timestamp_added, added_from, set_name, nodes, arcs, k_zero, density, scenarios, budget, policies, rep, solver, subsolver, objective, time_ms, unbounded, optimal, gap, cuts_rounds, cuts_added, avg_cbtime_ms, avg_sptime_ms, partition, m_sym, g_sym) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
-
+_DEFAULT_PSPACE = "defaultproblem"
 
 _DEFAULT_ROW = ("MANUAL", "faketest", 1, 0, "MYSOLVER", 100.0, 1000.0)
 _ASPI_TEST_ROW = (
@@ -56,55 +68,55 @@ _ASPI_TEST_ROW = (
     -1,
     -1,
 )
-
 _ADDED_FROM_CSV: str = "CSV"
+_RESULTS_TABLE_NAME = "results"
+
+feature_to_alchemy_types: dict[type, type] = {
+    str: String,
+    int: Integer,
+    float: Float,
+    bool: Boolean,
+    datetime: DateTime,
+}
 
 
-class DBM:
-    def __init__(self, pspace):
+class AlchemyAPI:
+    def __init__(self, pspace: ProblemSpace, engine: Engine, metadata: MetaData):
         self.pspace: ProblemSpace = pspace
         self.odtf = OptiDateTimeFactory()
-        self.pspace_dbpath: Path = Path(_SPACE) / pspace.name / _EXPERIMENTS_DB
-        self.con = sqlite3.connect(self.pspace_dbpath)
-        self.cur = self.con.cursor()
-        self.check_results_table()
+        self.engine: Engine = engine
+        self.metadata: MetaData = metadata
 
-    def create_results_table(self):
-        if self.pspace.name == "defaultproblem":
-            self.cur.execute(_SQL_CREATE_RESULTS_DEFAULT)
-        elif self.pspace.name == "aspi":
-            self.cur.execute(_SQL_CREATE_RESULTS_ASPI)
+    def row_values_to_dict(self, row: list[Any]) -> OrderedDict[str, Any]:
+        # TODO: combine AlchemyAPI.row_values_to_dict and ProblemSpace.validate to only iterate over row once when we decide how to
+        # handle errors more gracefully (we can avoid having the validate method return a bool)
+        # generally part of an obviously needed refactor to create a cleaner api between pspace feature and alchemy column
+        # its stinky up in here
+        feature_names: list[str] = [
+            init_data_feature_timestamp_added()["name"],
+            init_data_feature_added_from()["name"],
+        ]
+        feature_names.extend(
+            [f.name for f in self.pspace.full_row_features_without_runkey()]
+        )
+        row_value_dict = OrderedDict()
 
-    def check_results_table(self):
-        res = self.cur.execute(_SQL_GETSCHEMA)
+        for f, val in zip(feature_names, row):
+            row_value_dict[f] = val
 
-        if res.fetchone() is None:
-            # switch for based on pspace
-            self.create_results_table()
-            print("created results table")
+        return row_value_dict
 
-    def insert_single_row(self, row):
-        # TODO: start to work on some "interactive" error handling here
-        # user can handle migration errors as rows are added one by one
-        # TODO: should (can) we deduplicate here, or when using data?
-        sql: str = ""
-        final_row: tuple[Any] = row
+    def insert_single_row(self, row_values: list[Any]) -> None:
+        row_dict = self.row_values_to_dict(row_values)
+        stmt = insert(self.metadata.tables[_RESULTS_TABLE_NAME]).values(**row_dict)
+        stmt.compile()
 
-        # look out: this is currently "hardcoded" for the two test problemspaces
-        if self.pspace.name == "aspi":
-            sql = _SQL_INSERT_SINGLE_ASPIRESULTS_ROW
-            if final_row is None:
-                final_row = _ASPI_TEST_ROW
-        else:
-            sql = _SQL_INSERT_SINGLE_RESULTS_ROW
-            if final_row is None:
-                final_row = _DEFAULT_ROW
+        with self.engine.connect() as conn:
+            conn.execute(stmt)
+            conn.commit()
+            print(f"added one row to results table in problem {self.pspace.name}")
 
-        # run_id gets added by sqlite
-        self.cur.execute(sql, final_row)
-        self.con.commit()
-
-    def insert_rows(self, df):
+    def insert_rows(self, df: DataFrame) -> None:
         for _, csv_row in df.iterrows():
             csv_row = list(csv_row)
             valid = self.pspace.validate_row(csv_row)
@@ -114,12 +126,160 @@ class DBM:
                 print(f"skipping non-valid row: {csv_row}")
                 continue
 
-            row = [self.odtf.optinow_sqlite(), _ADDED_FROM_CSV]
+            row = [self.odtf.optinow(), _ADDED_FROM_CSV]
             row.extend(csv_row)
-            self.insert_single_row(tuple(row))
-            print(f"added one row to results table in problem {self.pspace.name}")
+            self.insert_single_row(row)
 
     def results_table_head(self):
-        res = self.cur.execute(_SQL_GETALL_RESULTS)
-        row = res.fetchone()
-        print(row)
+        pass
+        # res = self.cur.execute(_SQL_GETALL_RESULTS)
+        # row = res.fetchone()
+        # print(row)
+
+
+class AlchemyFactory:
+    def __init__(self, pspace: ProblemSpace):
+        self.pspace: ProblemSpace = pspace
+        self.dbpath: Path = Path(_SPACE) / pspace.name / _EXPERIMENTS_DB
+
+        # create_engine does not create db file if it DNE
+        self.engine: Engine = create_engine(_SQLITE_PREF + str(self.dbpath), echo=True)
+        # inspecting creates db file if it DNE
+        self.inspector: Inspector = inspect(self.engine)
+
+    # TODO: needs to return error or AlchemyAPI
+    def check_and_init_db(self):
+        tables: list[str] = self.inspector.get_table_names()
+
+        # generic runtime error / unresolvable based on table names
+        # other unknown tables in database
+        if len(tables) > 1 or (len(tables) == 1 and tables[0] != _RESULTS_TABLE_NAME):
+            raise RuntimeError(
+                f"I cannot reconcile the problemspace {self.pspace.name} with its database"
+            )
+
+        # changes needed
+        # no results table
+        if len(tables) == 0:
+            return self.create_db()
+
+        # tables are correct, validate (check columns against problemspace), (no migration yet, missing columns raise error, alembic soon?), reflect
+        if tables == [_RESULTS_TABLE_NAME]:
+            # validate and reflect
+            columns = self.inspector.get_columns(_RESULTS_TABLE_NAME)
+
+            feature_names = [
+                init_data_feature_run_id()["name"],
+                init_data_feature_added_from()["name"],
+                init_data_feature_timestamp_added()["name"],
+            ]
+
+            feature_names.extend(
+                [f.name for f in self.pspace.full_row_features_without_runkey()]
+            )
+
+            fnames = set(feature_names)
+
+            # refactor column | feature interface
+            for c in columns:
+                print(c)
+                if c["name"] == "run_id" and c["primary_key"] == 0:
+                    raise RuntimeError(
+                        f"I cannot reconcile the problemspace {self.pspace.name} with its database: run_id must be primary_key"
+                    )
+                if c["name"] not in fnames:
+                    raise RuntimeError(
+                        f"I cannot reconcile the problemspace {self.pspace.name} with its database: extra column {c['name']}"
+                    )
+                fnames.remove(c["name"])
+
+            if len(fnames) > 0:
+                raise RuntimeError(
+                    f"I cannot reconcile the problemspace {self.pspace.name} with its database: missing features {fnames}"
+                )
+
+            return self.reflect_db()
+
+    def feature_to_column(self, feature: Feature, pk=False):
+        # TODO: default is not actually writing to SQLAlchemy column object rn
+        # does this even matter?
+        return Column(
+            feature.name,
+            feature_to_alchemy_types[feature.feature_type],
+            primary_key=pk,
+            default=feature.default,
+            nullable=not feature.required,
+        )
+
+    def run_key_columns(self) -> list[Column]:
+        cols: list[Column] = []
+        for feature_name, feature in self.pspace.run_key.items():
+            pk = False
+            if feature_name == "run_id":
+                pk = True
+            cols.append(self.feature_to_column(feature=feature, pk=pk))
+        return cols
+
+    def instance_key_columns(self) -> list[Column]:
+        cols: list[Column] = []
+        for _, feature in self.pspace.instance_key.items():
+            pk = False
+            cols.append(self.feature_to_column(feature=feature, pk=pk))
+        return cols
+
+    def solver_key_columns(self) -> list[Column]:
+        cols: list[Column] = []
+        for _, feature in self.pspace.solver_key.items():
+            pk = False
+            cols.append(self.feature_to_column(feature=feature, pk=pk))
+        return cols
+
+    def output_key_columns(self) -> list[Column]:
+        cols: list[Column] = []
+        for _, feature in self.pspace.output_key.items():
+            pk = False
+            cols.append(self.feature_to_column(feature=feature, pk=pk))
+        return cols
+
+    def create_db(self) -> AlchemyAPI:
+        columns: list[Column] = self.run_key_columns()
+        columns.extend(self.instance_key_columns())
+        columns.extend(self.solver_key_columns())
+        columns.extend(self.output_key_columns())
+        metadata = MetaData()
+        self.results_table = Table(_RESULTS_TABLE_NAME, metadata, *columns)
+        metadata.create_all(self.engine)
+        return AlchemyAPI(self.pspace, self.engine, metadata)
+
+    def reflect_db(self) -> AlchemyAPI:
+        metadata = MetaData()
+        self.results_table = Table(
+            _RESULTS_TABLE_NAME, metadata, autoload_with=self.engine
+        )
+        return AlchemyAPI(self.pspace, self.engine, metadata)
+
+
+def init_alchemy_api(pspace: ProblemSpace) -> AlchemyAPI | None:
+    af = AlchemyFactory(pspace)
+    return af.check_and_init_db()
+
+
+def main():
+    from optiface.core.optispace import read_pspace_from_yaml
+    import argparse
+
+    parser = argparse.ArgumentParser(prog="test_dbm")
+    parser.add_argument("problem", type=str)
+    args = parser.parse_args()
+    pspace_name = args.problem
+
+    pspace = read_pspace_from_yaml(pspace_name)
+    db_api = init_alchemy_api(pspace)
+
+    if db_api:
+        print(db_api.metadata)
+        print(db_api.metadata.tables[_RESULTS_TABLE_NAME].columns)
+
+
+if __name__ == "__main__":
+    main()
