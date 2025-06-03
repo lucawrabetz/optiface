@@ -12,6 +12,7 @@ class OptiDateTimeFactory:
     """
 
     _STRF_ISO8061 = "%Y-%m-%dT%H:%M:%S.%fZ"
+    _DAY_FORMAT = "%m_%d_%y"
 
     _LUCABYEAR: int = 1996
     _LUCABMONTH: int = 9
@@ -62,6 +63,16 @@ class OptiDateTimeFactory:
             day=self._PETEBDAY,
             tzinfo=self._NY_TZ,
         )
+
+    def append_date(self, s: str) -> str:
+        """
+        Append today's date to string
+        """
+        now = self.optinow()
+        date_str = now.strftime(self._DAY_FORMAT)
+
+        res = s + "-" + date_str
+        return res
 
 
 if __name__ == "__main__":

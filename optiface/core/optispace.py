@@ -9,25 +9,31 @@ from pydantic import BaseModel
 from typing import Any, TypeAlias, TypeVar, Generic, Callable, Type
 
 from optiface.core.featuredata import (
-    init_data_feature_run_id,
-    init_data_feature_timestamp_added,
-    init_data_feature_added_from,
+    _RUN_KEY_DATA,
+    _DEFAULT_INSTANCE_KEY_DATA,
+    _DEFAULT_SOLVER_KEY_DATA,
+    _DEFAULT_OUTPUT_KEY_DATA,
+    _INSTANCE_KEY,
+    _SOLVER_KEY,
+    _OUTPUT_KEY,
+    _REQUIRED,
+    _DEFAULT,
+    _VERBOSE_NAME,
+    _SHORT_NAME,
+    _FEATURE_TYPE_STR,
 )
 
 T = TypeVar("T")
 
-_RUN_KEY_DATA = {
-    "run_id": init_data_feature_run_id(),
-    "timestamp_added": init_data_feature_timestamp_added(),
-    "added_from": init_data_feature_added_from(),
-}
 
-_INSTANCE_KEY = "instance_key"
-_SOLVER_KEY = "solver_key"
-_OUTPUT_KEY = "output_key"
+from optiface.constants import (
+    _SPACE,
+    _PS_FILE,
+    _EXPERIMENTS_DBFILE,
+    check_make_dir,
+    copy_dir,
+)
 
-_SPACE: Path = Path("space")
-_PS_FILE = "problemspace.yaml"
 
 yaml_to_feature_type: dict[str, type] = {
     "str": str,
@@ -134,9 +140,15 @@ class Feature(Generic[T]):
     def __str__(self) -> str:
         return f"feature: {self.name}, feature_type: {self.feature_type}, required: {self.required}, default: {self.default}, output names: '{self.verbose_name}', '{self.short_name}'"
 
+    def raw_dict(self) -> dict[str, Any]:
+        return {
+            _REQUIRED: self.required,
+            _DEFAULT: self.default,
+            _VERBOSE_NAME: self.verbose_name,
+            _SHORT_NAME: self.short_name,
+            _FEATURE_TYPE_STR: self.feature_type_str,
+        }
 
-# 'Schema' type aliases
-GroupKey: TypeAlias = OrderedDict[str, Feature]
 
 # 'Row' type aliases
 FeatureValuePair: TypeAlias = tuple[Feature, Any]
@@ -144,11 +156,10 @@ FeatureValuePair: TypeAlias = tuple[Feature, Any]
 
 class ProblemSpace(BaseModel):
     name: str
-    run_key: GroupKey
-    instance_key: GroupKey
-    solver_key: GroupKey
-    output_key: GroupKey
-    filepath: Path
+    run_key: OrderedDict[str, Feature]
+    instance_key: OrderedDict[str, Feature]
+    solver_key: OrderedDict[str, Feature]
+    output_key: OrderedDict[str, Feature]
 
     def print_features(self):
         print(f"pspace: {self.name}")
@@ -160,6 +171,32 @@ class ProblemSpace(BaseModel):
             print(feature)
         for feature in self.output_key.values():
             print(feature)
+
+    def raw_feature_data(self) -> dict[str, dict[str, dict[str, str]]]:
+        instance_key = {k: v.raw_dict() for k, v in self.instance_key.items()}
+        solver_key = {k: v.raw_dict() for k, v in self.solver_key.items()}
+        output_key = {k: v.raw_dict() for k, v in self.output_key.items()}
+        return {
+            _INSTANCE_KEY: instance_key,
+            _SOLVER_KEY: solver_key,
+            _OUTPUT_KEY: output_key,
+        }
+
+    def write_to_yaml(self) -> None:
+        space_dir: Path = _SPACE / self.name
+
+        if not space_dir.exists():
+            space_dir.mkdir()
+
+        yaml_file: Path = space_dir / _PS_FILE
+
+        # TODO: take run_key off the problemspace class
+        yaml_data: dict[str, dict[str, dict[str, str]]] = self.raw_feature_data()
+
+        with open(yaml_file, "w") as file:
+            yaml.safe_dump(yaml_data, file)
+
+        return
 
     def full_row_features_without_runkey(self) -> list[Feature]:
         return (
@@ -202,27 +239,43 @@ class ProblemSpace(BaseModel):
 @dataclass
 class OptiSpace:
     problems: list[str]
-    current: str
+    current: ProblemSpace
 
 
-def process_key(data: dict[str, Any]) -> GroupKey:
-    key: GroupKey = OrderedDict()
+def process_key(data: dict[str, Any]) -> OrderedDict[str, Feature]:
+    key = OrderedDict()
 
     for feature_name, feature_data in data.items():
         data_copy = feature_data
         data_copy["name"] = feature_name
         new_feature = Feature(**data_copy)
         key[feature_name] = new_feature
+
     return key
+
+
+def init_default_problem_space(name: str) -> ProblemSpace:
+    run_key = process_key(_RUN_KEY_DATA)
+    instance_key = process_key(_DEFAULT_INSTANCE_KEY_DATA)
+    solver_key = process_key(_DEFAULT_SOLVER_KEY_DATA)
+    output_key = process_key(_DEFAULT_OUTPUT_KEY_DATA)
+
+    return ProblemSpace(
+        name=name,
+        run_key=run_key,
+        instance_key=instance_key,
+        solver_key=solver_key,
+        output_key=output_key,
+    )
 
 
 def read_pspace_from_yaml(name: str) -> ProblemSpace:
     """
-    Factory for ProblemSpace:
+    Factory for ProblemSpace (read from existing yaml config file):
         - in: problem name (e.g. testproblem, knapsack)
         - out: ProblemSpace object configured from space/<name>/problemspace.yaml
     """
-    filepath: Path = Path(_SPACE) / name / _PS_FILE
+    filepath: Path = _SPACE / name / _PS_FILE
 
     with open(filepath, "r") as file:
         yml_data = yaml.safe_load(file)
@@ -237,18 +290,19 @@ def read_pspace_from_yaml(name: str) -> ProblemSpace:
         instance_key=instance_key,
         solver_key=solver_key,
         output_key=output_key,
-        filepath=filepath,
     )
 
 
-def read_ospace() -> OptiSpace:
+def create_write_new_pspace(name: str) -> ProblemSpace:
     """
-    Factory for OptiSpace
+    Factory for new ProblemSpace:
+        - in: problem name (e.g. testproblem, knapsack)
+        - out: ProblemSpace object, yaml file written, db file created (but empty)
+
+    TODO easy additions (GFI):
+        - immediately add new custom features when creating (work with wizard)
     """
-    problems: list[str] = []
+    pspace = init_default_problem_space(name)
+    pspace.write_to_yaml()
 
-    for entry in _SPACE.iterdir():
-        if entry.is_dir():
-            problems.append(entry.name)
-
-    return OptiSpace(problems=problems, current=problems[0])
+    return pspace
