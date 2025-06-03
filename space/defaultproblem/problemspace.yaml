@@ -1,41 +1,33 @@
 instance_key:
-  set_name:
-    required: True
-    default: null
-    verbose_name: Set Name
-    short_name: s_n
-    feature_type_str: str
-  n:
-    required: True
-    default: null
-    verbose_name: Number of Items
-    short_name: n
-    feature_type_str: int
   rep:
-    required: False
     default: 0
-    verbose_name: Instance Rep
-    short_name: i_rep
     feature_type_str: int
-
-solver_key:
-  solver:
-    required: True
+    required: false
+    short_name: i_rep
+    verbose_name: Instance Rep
+  set_name:
     default: null
-    verbose_name: Solver
-    short_name: sol
     feature_type_str: str
-
+    required: true
+    short_name: s_n
+    verbose_name: Set Name
 output_key:
   objective:
-    required: True
     default: null
-    verbose_name: Objective
+    feature_type_str: float
+    required: true
     short_name: obj
-    feature_type_str: float
+    verbose_name: Objective
   time_ms:
-    required: True
     default: null
-    verbose_name: Running Time (ms)
-    short_name: t_ms
     feature_type_str: float
+    required: true
+    short_name: t_ms
+    verbose_name: Running Time (ms)
+solver_key:
+  solver:
+    default: null
+    feature_type_str: str
+    required: true
+    short_name: sol
+    verbose_name: Solver

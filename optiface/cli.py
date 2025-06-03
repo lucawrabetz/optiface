@@ -1,4 +1,3 @@
-from operator import xor
 import os
 import sys
 import platform
@@ -15,7 +14,7 @@ from optiface.core.optispace import (
     create_write_new_pspace,
 )
 
-# from optiface.dbmanager.dbm import AlchemyWAPI, init_alchemy_api
+from optiface.dbmanager.dbm import AlchemyWAPI, init_alchemy_api
 
 from optiface.constants import (
     _SPACE,
@@ -113,10 +112,6 @@ class OptiFront:
             "exit": self.exit_optiface,
         }
 
-    def refresh(self):
-        self.ospace = self.read_ospace()
-        self.show_status()
-
     def show_status(self):
         self.wizard.header("Available problem spaces:")
 
@@ -133,6 +128,7 @@ class OptiFront:
             return
 
         self.ospace.current = create_write_new_pspace(name)
+        self.alchemy_wapi = init_alchemy_api(self.ospace.current)
         self.ospace.problems.append(name)
 
         self.wizard.success(f"Created new problem {name}!")
@@ -143,13 +139,11 @@ class OptiFront:
             "Please type the problem you'd like to switch to:"
         )
         if name not in set(self.ospace.problems):
-            self.wizard.warning(
-                f"Problem does not exist! Refreshing current problem {self.ospace.current}..."
-            )
-            self.ospace.current = read_pspace_from_yaml(self.ospace.current.name)
+            self.wizard.warning(f"Problem does not exist!")
         else:
-            self.wizard.success(f"Loading problem {name}...")
             self.ospace.current = read_pspace_from_yaml(name)
+            self.alchemy_wapi = init_alchemy_api(self.ospace.current)
+            self.wizard.success(f"Loading problem {name}...")
 
     def show_help(self):
         self.wizard.header("Available commands:")
@@ -171,9 +165,11 @@ class OptiFront:
 
         return
 
-    def read_ospace(self) -> OptiSpace:
+    def read_ospace(self) -> None:
         """
         OptiSpace discovery init / refresh.
+
+        Db API will start off tightly coupled with current pspace.
         """
         problems: list[str] = []
 
@@ -181,11 +177,14 @@ class OptiFront:
             if entry.is_dir():
                 problems.append(entry.name)
 
-        return OptiSpace(problems=problems, current=read_pspace_from_yaml(problems[0]))
+        current_pspace = read_pspace_from_yaml(problems[0])
+        self.alchemy_wapi = init_alchemy_api(current_pspace)
+
+        self.ospace: OptiSpace = OptiSpace(problems=problems, current=current_pspace)
 
     def run(self) -> None:
         self.startup()
-        self.ospace = self.read_ospace()
+        self.read_ospace()
 
         while True:
             choice = self.wizard.choice_input(list(self._CMD.keys()))

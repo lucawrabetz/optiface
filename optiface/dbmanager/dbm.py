@@ -23,22 +23,18 @@ from sqlalchemy import (
 from optiface.core.optispace import (
     ProblemSpace,
     Feature,
+    run_key_features,
 )
 
-from optiface.core.featuredata import (
-    init_data_feature_run_id,
-    init_data_feature_timestamp_added,
-    init_data_feature_added_from,
-)
+from optiface.core.featuredata import _RUN_KEY_DATA
 
 from optiface.core.optidatetime import OptiDateTimeFactory
+
+from optiface.constants import _SQLITE_PREF, _SPACE, _EXPERIMENTS_DBFILE
 
 # TODO: refactor to SQL query file
 # TODO: (CREATE TABLE) to init new table based on pspace config (i.e. columns)
 # TODO: (INSERT INTO) inserting columns using pspace config
-_SQLITE_PREF = "sqlite+pysqlite:///"
-_SPACE = "space"
-_EXPERIMENTS_DB = "experiments.db"
 _DEFAULT_PSPACE = "defaultproblem"
 
 _DEFAULT_ROW = ("MANUAL", "faketest", 1, 0, "MYSOLVER", 100.0, 1000.0)
@@ -80,7 +76,7 @@ feature_to_alchemy_types: dict[type, type] = {
 }
 
 
-class AlchemyAPI:
+class AlchemyWAPI:
     def __init__(self, pspace: ProblemSpace, engine: Engine, metadata: MetaData):
         self.pspace: ProblemSpace = pspace
         self.odtf = OptiDateTimeFactory()
@@ -88,17 +84,12 @@ class AlchemyAPI:
         self.metadata: MetaData = metadata
 
     def row_values_to_dict(self, row: list[Any]) -> OrderedDict[str, Any]:
-        # TODO: combine AlchemyAPI.row_values_to_dict and ProblemSpace.validate to only iterate over row once when we decide how to
+        # TODO: combine AlchemyWAPI.row_values_to_dict and ProblemSpace.validate to only iterate over row once when we decide how to
         # handle errors more gracefully (we can avoid having the validate method return a bool)
         # generally part of an obviously needed refactor to create a cleaner api between pspace feature and alchemy column
         # its stinky up in here
-        feature_names: list[str] = [
-            init_data_feature_timestamp_added()["name"],
-            init_data_feature_added_from()["name"],
-        ]
-        feature_names.extend(
-            [f.name for f in self.pspace.full_row_features_without_runkey()]
-        )
+        feature_names: list[str] = [fname for fname in _RUN_KEY_DATA.keys()]
+        feature_names.extend([f.name for f in self.pspace.full_row()])
         row_value_dict = OrderedDict()
 
         for f, val in zip(feature_names, row):
@@ -140,14 +131,14 @@ class AlchemyAPI:
 class AlchemyFactory:
     def __init__(self, pspace: ProblemSpace):
         self.pspace: ProblemSpace = pspace
-        self.dbpath: Path = Path(_SPACE) / pspace.name / _EXPERIMENTS_DB
+        self.dbpath: Path = Path(_SPACE) / pspace.name / _EXPERIMENTS_DBFILE
 
         # create_engine does not create db file if it DNE
         self.engine: Engine = create_engine(_SQLITE_PREF + str(self.dbpath), echo=True)
         # inspecting creates db file if it DNE
         self.inspector: Inspector = inspect(self.engine)
 
-    # TODO: needs to return error or AlchemyAPI
+    # TODO: needs to return error or AlchemyWAPI
     def check_and_init_db(self):
         tables: list[str] = self.inspector.get_table_names()
 
@@ -168,15 +159,9 @@ class AlchemyFactory:
             # validate and reflect
             columns = self.inspector.get_columns(_RESULTS_TABLE_NAME)
 
-            feature_names = [
-                init_data_feature_run_id()["name"],
-                init_data_feature_added_from()["name"],
-                init_data_feature_timestamp_added()["name"],
-            ]
+            feature_names = [f for f in _RUN_KEY_DATA.keys()]
 
-            feature_names.extend(
-                [f.name for f in self.pspace.full_row_features_without_runkey()]
-            )
+            feature_names.extend([f.name for f in self.pspace.full_row()])
 
             fnames = set(feature_names)
 
@@ -213,7 +198,7 @@ class AlchemyFactory:
 
     def run_key_columns(self) -> list[Column]:
         cols: list[Column] = []
-        for feature_name, feature in self.pspace.run_key.items():
+        for feature_name, feature in run_key_features().items():
             pk = False
             if feature_name == "run_id":
                 pk = True
@@ -241,7 +226,7 @@ class AlchemyFactory:
             cols.append(self.feature_to_column(feature=feature, pk=pk))
         return cols
 
-    def create_db(self) -> AlchemyAPI:
+    def create_db(self) -> AlchemyWAPI:
         columns: list[Column] = self.run_key_columns()
         columns.extend(self.instance_key_columns())
         columns.extend(self.solver_key_columns())
@@ -249,17 +234,17 @@ class AlchemyFactory:
         metadata = MetaData()
         self.results_table = Table(_RESULTS_TABLE_NAME, metadata, *columns)
         metadata.create_all(self.engine)
-        return AlchemyAPI(self.pspace, self.engine, metadata)
+        return AlchemyWAPI(self.pspace, self.engine, metadata)
 
-    def reflect_db(self) -> AlchemyAPI:
+    def reflect_db(self) -> AlchemyWAPI:
         metadata = MetaData()
         self.results_table = Table(
             _RESULTS_TABLE_NAME, metadata, autoload_with=self.engine
         )
-        return AlchemyAPI(self.pspace, self.engine, metadata)
+        return AlchemyWAPI(self.pspace, self.engine, metadata)
 
 
-def init_alchemy_api(pspace: ProblemSpace) -> AlchemyAPI | None:
+def init_alchemy_api(pspace: ProblemSpace) -> AlchemyWAPI | None:
     af = AlchemyFactory(pspace)
     return af.check_and_init_db()
 

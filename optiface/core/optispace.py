@@ -156,14 +156,13 @@ FeatureValuePair: TypeAlias = tuple[Feature, Any]
 
 class ProblemSpace(BaseModel):
     name: str
-    run_key: OrderedDict[str, Feature]
     instance_key: OrderedDict[str, Feature]
     solver_key: OrderedDict[str, Feature]
     output_key: OrderedDict[str, Feature]
 
     def print_features(self):
         print(f"pspace: {self.name}")
-        for feature in self.run_key.values():
+        for feature in _RUN_KEY_DATA.values():
             print(feature)
         for feature in self.instance_key.values():
             print(feature)
@@ -198,7 +197,7 @@ class ProblemSpace(BaseModel):
 
         return
 
-    def full_row_features_without_runkey(self) -> list[Feature]:
+    def full_row(self) -> list[Feature]:
         return (
             list(self.instance_key.values())
             + list(self.solver_key.values())
@@ -211,7 +210,7 @@ class ProblemSpace(BaseModel):
         # empty value is recognized as None, not actually missing features in the list:
         # THIS DOES NOT INCLUDE THE RUN_KEY
 
-        features = self.full_row_features_without_runkey()
+        features = self.full_row()
 
         if len(row) < len(features):
             print(f"not valid: incomplete row")
@@ -254,15 +253,17 @@ def process_key(data: dict[str, Any]) -> OrderedDict[str, Feature]:
     return key
 
 
+def run_key_features() -> OrderedDict[str, Feature]:
+    return process_key(_RUN_KEY_DATA)
+
+
 def init_default_problem_space(name: str) -> ProblemSpace:
-    run_key = process_key(_RUN_KEY_DATA)
     instance_key = process_key(_DEFAULT_INSTANCE_KEY_DATA)
     solver_key = process_key(_DEFAULT_SOLVER_KEY_DATA)
     output_key = process_key(_DEFAULT_OUTPUT_KEY_DATA)
 
     return ProblemSpace(
         name=name,
-        run_key=run_key,
         instance_key=instance_key,
         solver_key=solver_key,
         output_key=output_key,
@@ -279,14 +280,12 @@ def read_pspace_from_yaml(name: str) -> ProblemSpace:
 
     with open(filepath, "r") as file:
         yml_data = yaml.safe_load(file)
-        run_key = process_key(_RUN_KEY_DATA)
         instance_key = process_key(yml_data[_INSTANCE_KEY])
         solver_key = process_key(yml_data[_SOLVER_KEY])
         output_key = process_key(yml_data[_OUTPUT_KEY])
 
     return ProblemSpace(
         name=name,
-        run_key=run_key,
         instance_key=instance_key,
         solver_key=solver_key,
         output_key=output_key,
