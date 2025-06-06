@@ -25,6 +25,7 @@ pysqlite3 = "^0.5.4"
 pandas = "^2.2.3"
 sqlalchemy = "^2.0.0"
 rich = "^14.0.0"
+pytest-mock = "^3.14.1"
 
 
 [build-system]
