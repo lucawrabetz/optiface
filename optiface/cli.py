@@ -5,13 +5,12 @@ import platform
 from typing import Callable
 from pathlib import Path
 
-from _pytest.stash import D
 
 from optiface.core.optispace import (
     ProblemSpace,
     OptiSpace,
+    OSpaceManager,
     read_pspace_from_yaml,
-    create_write_new_pspace,
 )
 
 from optiface.dbmanager.dbm import AlchemyWAPI, init_alchemy_api
@@ -37,7 +36,7 @@ class OptiWizard:
     _OPTIFACE = f"[bold {_OPTIORANGE}]optiface =][/bold {_OPTIORANGE}]"
     _EXIT_MSG = "\n[bold dark_orange3]exiting optiface =] goodbye![/bold dark_orange3]"
 
-    def __init__(self, console: Console):
+    def __init__(self, console: Console = Console()):
         self.console = console
         self.console.clear()
 
@@ -100,50 +99,62 @@ class OptiFront:
         "exit": "Exit the application",
     }
 
-    def __init__(self):
+    def __init__(self, wizard: OptiWizard):
         self.console = Console()
-        self.wizard = OptiWizard(self.console)
+        self.wizard = wizard
 
         self._CMD: dict[str, Callable] = {
-            "new": self.create_new_pspace,
-            "switch": self.switch_current_pspace,
+            "new": self.new_pspace,
+            "switch": self.switch_pspace,
             "status": self.show_status,
             "help": self.show_help,
             "exit": self.exit_optiface,
         }
 
-    def show_status(self):
-        self.wizard.header("Available problem spaces:")
+        self._startup()
+        self._read_ospace()
 
-        for pname in self.ospace.problems:
-            if pname == self.ospace.current.name:
-                self.wizard.hl_list_item(pname)
-            else:
-                self.wizard.list_item(pname)
+    def run(self) -> None:
+        while True:
+            choice = self.wizard.choice_input(list(self._CMD.keys()))
+            self._CMD[choice]()
 
-    def create_new_pspace(self) -> None:
-        name = self.wizard.string_input("What is the name of your problem?")
-        if name in set(self.ospace.problems):
+    def new_pspace(self) -> None:
+        name = self.wizard.string_input("what is the name of your problem?")
+
+        if self.osm.problem_exists(name):
             self.wizard.warning(f"Problem {name} already exists!")
             return
 
-        self.ospace.current = create_write_new_pspace(name)
-        self.alchemy_wapi = init_alchemy_api(self.ospace.current)
-        self.ospace.problems.append(name)
+        self.osm.add_new_pspace(name)
+        self.alchemy_wapi = init_alchemy_api(self.osm.current)
 
         self.wizard.success(f"Created new problem {name}!")
         self.show_status()
 
-    def switch_current_pspace(self) -> None:
+    def switch_pspace(self) -> None:
         name = self.wizard.string_input(
             "Please type the problem you'd like to switch to:"
         )
-        if name not in set(self.ospace.problems):
-            self.wizard.warning(f"Problem does not exist!")
-        else:
-            self.ospace.current = read_pspace_from_yaml(name)
-            self.alchemy_wapi = init_alchemy_api(self.ospace.current)
-            self.wizard.success(f"Loading problem {name}...")
+        if not self.osm.problem_exists(name):
+            self.wizard.warning(f"Problem {name} does not exist!")
+            return
+
+        self.wizard.success(f"Loading problem {name}...")
+        self.osm.switch_current_pspace(name)
+        self.alchemy_wapi = init_alchemy_api(self.osm.current)
+        self.wizard.success("Done!")
+
+    def show_status(self):
+        self.wizard.header("Available problem spaces:")
+
+        current_name = self.osm.current.name
+
+        for pname in self.osm.problems:
+            if pname == current_name:
+                self.wizard.hl_list_item(pname)
+            else:
+                self.wizard.list_item(pname)
 
     def show_help(self):
         self.wizard.header("Available commands:")
@@ -154,7 +165,7 @@ class OptiFront:
         self.wizard.show_exit()
         sys.exit(0)
 
-    def startup(self) -> None:
+    def _startup(self) -> None:
         # sanity checks
         if set(self._CMD.keys()) != set(self._CMD_DESCR.keys()):
             raise RuntimeError(
@@ -165,34 +176,19 @@ class OptiFront:
 
         return
 
-    def read_ospace(self) -> None:
+    def _read_ospace(self) -> None:
         """
         OptiSpace discovery init / refresh.
 
-        Db API will start off tightly coupled with current pspace.
+        Db api tightly coupled with current pspace.
         """
-        problems: list[str] = []
-
-        for entry in _SPACE.iterdir():
-            if entry.is_dir():
-                problems.append(entry.name)
-
-        current_pspace = read_pspace_from_yaml(problems[0])
-        self.alchemy_wapi = init_alchemy_api(current_pspace)
-
-        self.ospace: OptiSpace = OptiSpace(problems=problems, current=current_pspace)
-
-    def run(self) -> None:
-        self.startup()
-        self.read_ospace()
-
-        while True:
-            choice = self.wizard.choice_input(list(self._CMD.keys()))
-            self._CMD[choice]()
+        self.osm = OSpaceManager()
+        self.alchemy_wapi = init_alchemy_api(self.osm.current)
 
 
 def run():
-    of = OptiFront()
+    wizard = OptiWizard()
+    of = OptiFront(wizard)
     of.run()
 
 

@@ -10,13 +10,16 @@ from optiface.core.featuredata import (
 )
 from optiface.core.optidatetime import OptiDateTimeFactory
 from optiface.core.optispace import (
+    OSpaceManager,
     yaml_to_feature_type,
     Feature,
     ProblemSpace,
     OptiSpace,
     read_pspace_from_yaml,
-    read_ospace,
+    init_default_problem_space,
 )
+
+from optiface.constants import _EXPERIMENTS_DBFILE, _SPACE, _PS_FILE, _DEFAULT
 
 ######### VERY IMPORTANT #########
 
@@ -31,12 +34,6 @@ from optiface.core.optispace import (
 
 ##################################
 
-_SPACE = "space"
-_PSPACE_YAML = "problemspace.yaml"
-
-_DEFAULT_PSPACE_NAME: str = "defaultproblem"
-# TODO: move problemspace.yaml and experiments.db to optiface/core/optispace.py
-_DEFAULT_PSPACE_PATH: Path = Path(_SPACE) / _DEFAULT_PSPACE_NAME / _PSPACE_YAML
 
 opti_dt = OptiDateTimeFactory()
 
@@ -53,6 +50,7 @@ def init_data_feature_set_name() -> dict[str, Any]:
 
 
 def init_data_feature_set_name_unknown_type() -> dict[str, Any]:
+    # incorrect bc unknown type.
     return {
         "name": "set_name",
         "required": True,
@@ -64,6 +62,7 @@ def init_data_feature_set_name_unknown_type() -> dict[str, Any]:
 
 
 def init_data_feature_set_name_withdefault() -> dict[str, Any]:
+    # incorrect bc shouldn't have default.
     return {
         "name": "set_name",
         "required": True,
@@ -75,6 +74,7 @@ def init_data_feature_set_name_withdefault() -> dict[str, Any]:
 
 
 def init_data_feature_timestamp_nodefault() -> dict[str, Any]:
+    # incorrect bc should have default.
     return {
         "name": "timestamp_added",
         "required": False,
@@ -86,6 +86,7 @@ def init_data_feature_timestamp_nodefault() -> dict[str, Any]:
 
 
 def init_data_feature_timestamp_featuretype_int() -> dict[str, Any]:
+    # incorrect bc wrong type.
     return {
         "name": "timestamp_added",
         "required": False,
@@ -97,6 +98,7 @@ def init_data_feature_timestamp_featuretype_int() -> dict[str, Any]:
 
 
 def init_data_feature_timestamp_intdefault() -> dict[str, Any]:
+    # incorrect bc default is of wrong type.
     return {
         "name": "timestamp_added",
         "required": False,
@@ -107,63 +109,8 @@ def init_data_feature_timestamp_intdefault() -> dict[str, Any]:
     }
 
 
-def init_data_feature_n() -> dict[str, Any]:
-    return {
-        "name": "n",
-        "required": True,
-        "default": None,
-        "verbose_name": "Number of Items",
-        "short_name": "n",
-        "feature_type_str": "int",
-    }
-
-
-def init_data_feature_rep() -> dict[str, Any]:
-    return {
-        "name": "rep",
-        "required": False,
-        "default": 0,
-        "verbose_name": "Instance Rep",
-        "short_name": "i_rep",
-        "feature_type_str": "int",
-    }
-
-
-# TODO: unclear to me whether str is enough as solver "uuid" or if a solver id class is helpful
-def init_data_feature_solver() -> dict[str, Any]:
-    return {
-        "name": "solver",
-        "required": True,
-        "default": None,
-        "verbose_name": "Solver",
-        "short_name": "sol",
-        "feature_type_str": "str",
-    }
-
-
-def init_data_feature_objective() -> dict[str, Any]:
-    return {
-        "name": "objective",
-        "required": True,
-        "default": None,
-        "verbose_name": "Objective",
-        "short_name": "obj",
-        "feature_type_str": "float",
-    }
-
-
-def init_data_feature_time_ms() -> dict[str, Any]:
-    return {
-        "name": "time_ms",
-        "required": True,
-        "default": None,
-        "verbose_name": "Running Time (ms)",
-        "short_name": "t_ms",
-        "feature_type_str": "float",
-    }
-
-
 def init_data_feature_time_ms_verbosenameint() -> dict[str, Any]:
+    # incorrect bc verbose name should be a string.
     return {
         "name": "time_ms",
         "required": True,
@@ -175,6 +122,7 @@ def init_data_feature_time_ms_verbosenameint() -> dict[str, Any]:
 
 
 def init_data_feature_time_ms_shortnameint() -> dict[str, Any]:
+    # incorrect bc short name should be a string.
     return {
         "name": "time_ms",
         "required": True,
@@ -183,33 +131,6 @@ def init_data_feature_time_ms_shortnameint() -> dict[str, Any]:
         "short_name": 1,
         "feature_type_str": "float",
     }
-
-
-def init_default_problem_space() -> ProblemSpace:
-    return ProblemSpace(
-        name=_DEFAULT_PSPACE_NAME,
-        run_key={
-            "run_id": Feature(**init_data_feature_run_id()),
-            "timestamp_added": Feature(**init_data_feature_timestamp_added()),
-            "added_from": Feature(**init_data_feature_added_from()),
-        },
-        instance_key={
-            "set_name": Feature(**init_data_feature_set_name()),
-            "n": Feature(**init_data_feature_n()),
-            "rep": Feature(**init_data_feature_rep()),
-        },
-        solver_key={"solver": Feature(**init_data_feature_solver())},
-        output_key={
-            "objective": Feature(**init_data_feature_objective()),
-            "time_ms": Feature(**init_data_feature_time_ms()),
-        },
-        filepath=_DEFAULT_PSPACE_PATH,
-    )
-
-
-class TestSetup:
-    def test_optiface_import(self):
-        importlib.import_module("optiface")
 
 
 class TestFeature:
@@ -290,16 +211,31 @@ def incorrect_missing_required_default_row() -> list[Any]:
 
 class TestProblemSpace:
     """
+    ProblemSpace is an in-memory data-only python representation of the problem - instance, solvers, and outputs.
+
     Behaviors:
     - ProblemSpace class:
         - is read correctly from yaml, resulting in equivalent pspace instance to hardcoded test_pspace instance.
-        - all features pass validation checks
+        - test validation functionality
+            -
     """
 
-    def test_defaultpspace_read(self):
-        test_pspace = init_default_problem_space()
-        read_pspace = read_pspace_from_yaml(name=_DEFAULT_PSPACE_NAME)
-        assert test_pspace == read_pspace
+    def test_read_pspace_from_yaml(self):
+        default_pspace = init_default_problem_space()
+        read_pspace = read_pspace_from_yaml()
+
+        # excessive sanity checks
+        assert isinstance(read_pspace.name, str)
+        assert read_pspace.name == _DEFAULT
+
+        for feature_name, feature in read_pspace.instance_key.items():
+            assert isinstance(feature_name, str)
+            assert feature_name == feature.name
+            assert feature.feature_type is not None
+            assert len(feature.verbose_name) > 0
+            assert len(feature.short_name) > 0
+
+        assert default_pspace == read_pspace
 
     def test_validate_correct_row(self):
         default_pspace = init_default_problem_space()
@@ -326,63 +262,42 @@ class TestProblemSpace:
         assert not valid
 
 
-class TestOptiSpace:
+class TestOSpaceManager:
     """
-    - start with just a list of problem names, managed by OSM
-
-    Behaviors (ospace):
-    - every problem name is correctly read, and filepath correctly constructed
-    - every pspace:
-        - (problemspace.yaml) every feature passes validation, some sanity checks for now
-                (covered in TestFeature.test_validation)
-        - (problemspace.yaml <-> experiments.db match)
-    """
-
-    def test_ospace(self):
-        ospace: OptiSpace = read_ospace()
-        assert _DEFAULT_PSPACE_NAME in set(ospace.problems)
-
-        for problem in ospace.problems:
-            # ProblemSpace is a BaseModel, so pydantic checks its types (right Pete?).
-            # We will still assert some types for excessive testing.
-
-            # TODO: make sure that once you do OSM, switch current
-            # ospace.current = problem
-            pspace: ProblemSpace = read_pspace_from_yaml(problem)
-            assert isinstance(pspace.name, str)
-            assert pspace.name == problem
-            assert isinstance(pspace.filepath, Path)
-
-            for feature_name, feature in pspace.instance_key.items():
-                assert isinstance(feature_name, str)
-                assert feature_name == feature.name
-                assert feature.feature_type is not None
-                assert len(feature.verbose_name) > 0
-                assert len(feature.short_name) > 0
-
-
-class TestOSM:
-    """
-    - OSM is a user <-> optispace API: so pspace yamls can (eventually) stay locked and safe
+    - OSpaceManager is a user <-> optispace API: so pspace yamls can stay locked and safe
+        - read
+            - every problem name is correctly read, and filepath correctly constructed
+            - (problemspace.yaml <-> experiments.db match)
+                - correct case (they match)
+                - errors:
+                    -
         - add new pspace
+        - switch active pspace
         - add feature to pspace *
         - remove feature from pspace *
-        - switch active pspace
     - * includes dbmanager interaction (add or remove columns from databases)
-
-    Behaviors:
-    - add new pspace
-    - switch pspaces
     """
 
-    def test_ps_add(self):
+    _TEST_PSPACE_NAME: str = "testspace"
+
+    def test_read(self):
+        osm: OSpaceManager = OSpaceManager()
+        assert _DEFAULT in set(osm.problems)
+
+    def test_add_new_pspace(self):
+        new_pspacedir: Path = _SPACE / self._TEST_PSPACE_NAME
+        new_experimentsdb: Path = new_pspacedir / _EXPERIMENTS_DBFILE
+        new_pspaceyaml: Path = new_pspacedir / _PS_FILE
+
+        assert new_pspacedir.exists()
+        assert new_experimentsdb.exists()
+        assert new_pspaceyaml.exists()
+
+    def test_pspace_switch(self):
         assert True
 
-    def test_pspace_add_feature(self):
+    def test_pspace_add_new_feature(self):
         assert True
 
     def test_pspace_remove_feature(self):
-        assert True
-
-    def test_pspace_switch(self):
         assert True

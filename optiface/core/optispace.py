@@ -3,7 +3,6 @@ from sqlalchemy.util import OrderedProperties
 import yaml
 from dataclasses import dataclass, field
 from datetime import datetime
-from collections import OrderedDict
 from pydantic import BaseModel
 
 from typing import Any, TypeAlias, TypeVar, Generic, Callable, Type
@@ -29,6 +28,7 @@ T = TypeVar("T")
 from optiface.constants import (
     _SPACE,
     _PS_FILE,
+    _DEFAULT,
     _EXPERIMENTS_DBFILE,
     check_make_dir,
     copy_dir,
@@ -156,9 +156,9 @@ FeatureValuePair: TypeAlias = tuple[Feature, Any]
 
 class ProblemSpace(BaseModel):
     name: str
-    instance_key: OrderedDict[str, Feature]
-    solver_key: OrderedDict[str, Feature]
-    output_key: OrderedDict[str, Feature]
+    instance_key: dict[str, Feature]
+    solver_key: dict[str, Feature]
+    output_key: dict[str, Feature]
 
     def print_features(self):
         print(f"pspace: {self.name}")
@@ -205,10 +205,11 @@ class ProblemSpace(BaseModel):
         )
 
     def validate_row(self, row: list[Any]) -> bool:
+        # this is currently BROKEN.
         # for now returns False if any incorrect cols encountered
         # replaces empty values with defaults in-place
         # empty value is recognized as None, not actually missing features in the list:
-        # THIS DOES NOT INCLUDE THE RUN_KEY
+        # DOES NOT INCLUDE THE RUN_KEY
 
         features = self.full_row()
 
@@ -241,8 +242,8 @@ class OptiSpace:
     current: ProblemSpace
 
 
-def process_key(data: dict[str, Any]) -> OrderedDict[str, Feature]:
-    key = OrderedDict()
+def process_key(data: dict[str, Any]) -> dict[str, Feature]:
+    key = dict()
 
     for feature_name, feature_data in data.items():
         data_copy = feature_data
@@ -253,11 +254,11 @@ def process_key(data: dict[str, Any]) -> OrderedDict[str, Feature]:
     return key
 
 
-def run_key_features() -> OrderedDict[str, Feature]:
+def run_key_features() -> dict[str, Feature]:
     return process_key(_RUN_KEY_DATA)
 
 
-def init_default_problem_space(name: str) -> ProblemSpace:
+def init_default_problem_space(name: str = _DEFAULT) -> ProblemSpace:
     instance_key = process_key(_DEFAULT_INSTANCE_KEY_DATA)
     solver_key = process_key(_DEFAULT_SOLVER_KEY_DATA)
     output_key = process_key(_DEFAULT_OUTPUT_KEY_DATA)
@@ -270,7 +271,7 @@ def init_default_problem_space(name: str) -> ProblemSpace:
     )
 
 
-def read_pspace_from_yaml(name: str) -> ProblemSpace:
+def read_pspace_from_yaml(name: str = _DEFAULT) -> ProblemSpace:
     """
     Factory for ProblemSpace (read from existing yaml config file):
         - in: problem name (e.g. testproblem, knapsack)
@@ -292,16 +293,39 @@ def read_pspace_from_yaml(name: str) -> ProblemSpace:
     )
 
 
-def create_write_new_pspace(name: str) -> ProblemSpace:
-    """
-    Factory for new ProblemSpace:
-        - in: problem name (e.g. testproblem, knapsack)
-        - out: ProblemSpace object, yaml file written, db file created (but empty)
+class OSpaceManager:
+    def __init__(self):
+        self.read()
 
-    TODO easy additions (GFI):
-        - immediately add new custom features when creating (work with wizard)
-    """
-    pspace = init_default_problem_space(name)
-    pspace.write_to_yaml()
+    @property
+    def current(self) -> ProblemSpace:
+        return self.ospace.current
 
-    return pspace
+    @property
+    def problems(self) -> list[str]:
+        return self.ospace.problems
+
+    def problem_exists(self, name: str) -> bool:
+        return name in set(self.ospace.problems)
+
+    def read(self) -> None:
+        problems: list[str] = []
+
+        for entry in _SPACE.iterdir():
+            if entry.is_dir():
+                problems.append(entry.name)
+
+        current_pspace = read_pspace_from_yaml(problems[0])
+        self.ospace = OptiSpace(problems=problems, current=current_pspace)
+
+    def add_new_pspace(self, name: str) -> None:
+        """
+        TODO easy additions (GFI):
+            - immediately add new custom features when creating (work with wizard)
+        """
+        self.ospace.current = init_default_problem_space(name)
+        self.ospace.current.write_to_yaml()
+        self.problems.append(name)
+
+    def switch_current_pspace(self, name: str) -> None:
+        self.ospace.current = read_pspace_from_yaml(name)

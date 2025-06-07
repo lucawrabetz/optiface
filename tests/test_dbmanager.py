@@ -9,8 +9,10 @@ _TEST_PSPACEDB_PATH: Path = Path(_SPACE) / _TEST_PSPACE_NAME / _EXPERIMENTS_DB
 
 class TestAlchemyFactory:
     """
+    AlchemyFactory is an alignment object that validates the active ProblemSpace's database, returning a ready to use AlchemyWAPI.
+
     Behaviors:
-    -  maintain experiments.db with problemspace features as columns (for active pspace)
+    -  validate experiments.db against pspace.
         - create db if it does not exist
         - create results table if there are no tables
         - raise RuntimeError if incorrect schema (other tables present)
@@ -20,9 +22,11 @@ class TestAlchemyFactory:
     pass
 
 
-class TestAlchemyAPI:
+class TestAlchemyWAPI:
     """
-    - insert row of data
+    AlchemyWAPI is an API between the active problem space and its database, allowing for the insertion of new data.
+
+    - insert row of data, validating row and handling errors:
         - when row is complete -> row is there when queried
         - when row has missing values -> correct defaults are used
         - when row has incorrect columns -> error

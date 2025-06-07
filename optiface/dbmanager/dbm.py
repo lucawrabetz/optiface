@@ -1,4 +1,3 @@
-from collections import OrderedDict
 from datetime import datetime
 from typing import Any
 
@@ -83,14 +82,14 @@ class AlchemyWAPI:
         self.engine: Engine = engine
         self.metadata: MetaData = metadata
 
-    def row_values_to_dict(self, row: list[Any]) -> OrderedDict[str, Any]:
+    def row_values_to_dict(self, row: list[Any]) -> dict[str, Any]:
         # TODO: combine AlchemyWAPI.row_values_to_dict and ProblemSpace.validate to only iterate over row once when we decide how to
         # handle errors more gracefully (we can avoid having the validate method return a bool)
         # generally part of an obviously needed refactor to create a cleaner api between pspace feature and alchemy column
         # its stinky up in here
         feature_names: list[str] = [fname for fname in _RUN_KEY_DATA.keys()]
         feature_names.extend([f.name for f in self.pspace.full_row()])
-        row_value_dict = OrderedDict()
+        row_value_dict = dict()
 
         for f, val in zip(feature_names, row):
             row_value_dict[f] = val
