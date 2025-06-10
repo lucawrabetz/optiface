@@ -7,6 +7,7 @@ from platformdirs import user_config_dir, user_data_dir
 _DEFAULT = "default"
 _KNAPSACK = "knapsack"
 _SPACE = Path("space")
+_MIGRATIONS = Path("migrations")
 
 _PS_FILE = "problemspace.yaml"
 _EXPERIMENTS_DBFILE = "experiments.db"
@@ -57,10 +58,7 @@ def copy_dir(src: str | Path, dst: str | Path) -> Path:
 
 
 def main():
-    if _USER_DATA_DIR.exists():
-        print(f"user data dir exists at: {_USER_DATA_DIR}")
-    else:
-        print(f"{_USER_DATA_DIR} does not exist")
+    pass
 
 
 if __name__ == "__main__":

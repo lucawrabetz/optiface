@@ -7,11 +7,18 @@ from pydantic import BaseModel
 
 from typing import Any, TypeAlias, TypeVar, Generic, Callable, Type
 
+from optiface.core.optidatetime import OptiDateTimeFactory
+
+from optiface.core.optierror import Status, Success, Failure
+
+
 from optiface.core.featuredata import (
-    _RUN_KEY_DATA,
-    _DEFAULT_INSTANCE_KEY_DATA,
-    _DEFAULT_SOLVER_KEY_DATA,
-    _DEFAULT_OUTPUT_KEY_DATA,
+    _TIMESTAMP_ADDED,
+    _ADDED_FROM,
+    _RUN_KEY_FDATA,
+    _DEFAULT_INSTANCE_KEY_FDATA,
+    _DEFAULT_SOLVER_KEY_FDATA,
+    _DEFAULT_OUTPUT_KEY_FDATA,
     _INSTANCE_KEY,
     _SOLVER_KEY,
     _OUTPUT_KEY,
@@ -154,6 +161,9 @@ class Feature(Generic[T]):
 FeatureValuePair: TypeAlias = tuple[Feature, Any]
 
 
+odtf = OptiDateTimeFactory()
+
+
 class ProblemSpace(BaseModel):
     name: str
     instance_key: dict[str, Feature]
@@ -162,7 +172,7 @@ class ProblemSpace(BaseModel):
 
     def print_features(self):
         print(f"pspace: {self.name}")
-        for feature in _RUN_KEY_DATA.values():
+        for feature in _RUN_KEY_FDATA.values():
             print(feature)
         for feature in self.instance_key.values():
             print(feature)
@@ -204,36 +214,61 @@ class ProblemSpace(BaseModel):
             + list(self.output_key.values())
         )
 
-    def validate_row(self, row: list[Any]) -> bool:
-        # this is currently BROKEN.
-        # for now returns False if any incorrect cols encountered
-        # replaces empty values with defaults in-place
-        # empty value is recognized as None, not actually missing features in the list:
-        # DOES NOT INCLUDE THE RUN_KEY
+    def add_run_key(self, row: dict[str, Any]) -> None:
+        # not run_id, as it is a primary_key, handled by sqlalchemy
+        row[_TIMESTAMP_ADDED] = odtf.optinow()
+        # can only migrate from csv for now
+        row[_ADDED_FROM] = "CSV"
 
-        features = self.full_row()
+    def validate_row(self, row: dict[str, Any]) -> Status:
+        # Sanitizes the row in-place with defaults.
+        # TODO: skipping of run_key features? Extra unexpected features?
 
-        if len(row) < len(features):
-            print(f"not valid: incomplete row")
-            print([f.name for f in features])
-            print(row)
-            return False
+        features: list[Feature] = self.full_row()
 
-        for i, value in enumerate(row):
-            if not validate_allowed_types[features[i].feature_type](value):
-                print(
-                    f"type not valid for feature {features[i].name}, value is: {value}"
-                )
-                return False
+        failure: Failure[None] = Failure(title="Row validation")
 
-        # TODO: we can't actually fully validate the row like this, we need row to arrive as a dict
-        # if features[i].required:
-        #     print(f"not valid: missing {features[i].name} which is required")
-        #     return False
-        # else:
-        #     row[i] = features[i].default
+        fset = set([f.name for f in features])
 
-        return True
+        for f in features:
+            # if the row contains a value for the feature, it must be of the correct type
+            if f.name in row.keys() and row[f.name] is not None:
+                if not validate_allowed_types[f.feature_type](row[f.name]):
+                    failure.add_err(
+                        err=f"type not valid for feature {f.name}, value is: {row[f.name]}",
+                        file=__file__,
+                    )
+
+            # if feature is required, it must be found in the row
+            else:
+                if f.required:
+                    failure.add_err(
+                        err=f"missing feature {f.name} which is required", file=__file__
+                    )
+                else:
+                    row[f.name] = f.default
+
+            # result: f was either found in the row or it was not required and we added it
+
+        if failure.has_errs:
+            return failure
+
+        # input row had all required features, now also filled in with defaults for missing
+        # non-required features
+        success: Success[None] = Success(value=None, title="Row validation")
+
+        # add notes for extraneous features if they existed, remove them from row
+        remove: list[str] = []
+        for c in row.keys():
+            if c not in fset:
+                note: str = f"additional column {c} with value {row[c]} ignored"
+                success.add_note(note, __file__)
+                remove.append(c)
+
+        for c in remove:
+            del row[c]
+
+        return success
 
 
 @dataclass
@@ -255,13 +290,13 @@ def process_key(data: dict[str, Any]) -> dict[str, Feature]:
 
 
 def run_key_features() -> dict[str, Feature]:
-    return process_key(_RUN_KEY_DATA)
+    return process_key(_RUN_KEY_FDATA)
 
 
 def init_default_problem_space(name: str = _DEFAULT) -> ProblemSpace:
-    instance_key = process_key(_DEFAULT_INSTANCE_KEY_DATA)
-    solver_key = process_key(_DEFAULT_SOLVER_KEY_DATA)
-    output_key = process_key(_DEFAULT_OUTPUT_KEY_DATA)
+    instance_key = process_key(_DEFAULT_INSTANCE_KEY_FDATA)
+    solver_key = process_key(_DEFAULT_SOLVER_KEY_FDATA)
+    output_key = process_key(_DEFAULT_OUTPUT_KEY_FDATA)
 
     return ProblemSpace(
         name=name,
@@ -302,6 +337,10 @@ class OSpaceManager:
         return self.ospace.current
 
     @property
+    def current_name(self) -> str:
+        return self.ospace.current.name
+
+    @property
     def problems(self) -> list[str]:
         return self.ospace.problems
 
@@ -314,6 +353,13 @@ class OSpaceManager:
         for entry in _SPACE.iterdir():
             if entry.is_dir():
                 problems.append(entry.name)
+
+        if problems == []:
+            self.ospace = OptiSpace(
+                problems=[_DEFAULT], current=init_default_problem_space(name=_DEFAULT)
+            )
+            self.ospace.current.write_to_yaml()
+            return
 
         current_pspace = read_pspace_from_yaml(problems[0])
         self.ospace = OptiSpace(problems=problems, current=current_pspace)

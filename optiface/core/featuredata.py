@@ -1,7 +1,4 @@
 from typing import Any
-from optiface.core.optidatetime import OptiDateTimeFactory
-
-opti_dt = OptiDateTimeFactory()
 
 _RUN_KEY = "run_key"
 _INSTANCE_KEY = "instance_key"
@@ -35,8 +32,8 @@ def init_data_feature_run_id() -> dict[str, Any]:
 def init_data_feature_timestamp_added() -> dict[str, Any]:
     return {
         "name": _TIMESTAMP_ADDED,
-        "required": False,
-        "default": opti_dt.optidefault(),
+        "required": True,
+        "default": None,
         "verbose_name": "Timestamp Added",
         "short_name": "ts_added",
         "feature_type_str": "datetime",
@@ -46,15 +43,15 @@ def init_data_feature_timestamp_added() -> dict[str, Any]:
 def init_data_feature_added_from() -> dict[str, Any]:
     return {
         "name": _ADDED_FROM,
-        "required": False,
-        "default": "RUN",
+        "required": True,
+        "default": None,
         "verbose_name": "Added From",
         "short_name": "from",
         "feature_type_str": "str",
     }
 
 
-_RUN_KEY_DATA = {
+_RUN_KEY_FDATA = {
     _RUN_ID: init_data_feature_run_id(),
     _TIMESTAMP_ADDED: init_data_feature_timestamp_added(),
     _ADDED_FROM: init_data_feature_added_from(),
@@ -86,7 +83,7 @@ def init_data_feature_rep() -> dict[str, Any]:
     }
 
 
-_DEFAULT_INSTANCE_KEY_DATA = {
+_DEFAULT_INSTANCE_KEY_FDATA = {
     _SET_NAME: init_data_feature_set_name(),
     _REP: init_data_feature_rep(),
 }
@@ -106,7 +103,7 @@ def init_data_feature_solver() -> dict[str, Any]:
     }
 
 
-_DEFAULT_SOLVER_KEY_DATA = {_SOLVER: init_data_feature_solver()}
+_DEFAULT_SOLVER_KEY_FDATA = {_SOLVER: init_data_feature_solver()}
 
 _OBJECTIVE = "objective"
 _TIME_MS = "time_ms"
@@ -134,7 +131,7 @@ def init_data_feature_time_ms() -> dict[str, Any]:
     }
 
 
-_DEFAULT_OUTPUT_KEY_DATA = {
+_DEFAULT_OUTPUT_KEY_FDATA = {
     _OBJECTIVE: init_data_feature_objective(),
     _TIME_MS: init_data_feature_time_ms(),
 }
