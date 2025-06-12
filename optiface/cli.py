@@ -108,10 +108,10 @@ class OptiWizard:
     def hl_list_item(self, msg: str) -> None:
         self.console.print(f"{self._TAB}* {msg} *", style=self._SUCCESS_STYLE)
 
-    def kv_hl_list(self, msg_pairs: dict[str, str]) -> None:
-        for k, v in msg_pairs.items():
+    def keyval_hl_list(self, msg_pairs: dict[str, str]) -> None:
+        for key, val in msg_pairs.items():
             self.console.print(
-                f"{self._TAB}[{self._SUCCESS_2_STYLE}]{k}:[/{self._SUCCESS_2_STYLE}] {v}"
+                f"{self._TAB}[{self._SUCCESS_2_STYLE}]{key}:[/{self._SUCCESS_2_STYLE}] {val}"
             )
 
     def success(self, msg: str) -> None:
@@ -283,7 +283,7 @@ class OptiFront:
     def show_help(self):
         self.wizard.header("Available commands:")
 
-        self.wizard.kv_hl_list(self._CMD_DESCR)
+        self.wizard.keyval_hl_list(self._CMD_DESCR)
 
     def exit_optiface(self):
         self.wizard.show_exit()
