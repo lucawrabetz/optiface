@@ -2,3 +2,7 @@ __pycache__/
 *.py[cod]
 .pytest_cache
 .vscode/
+migrations/
+!migrations/default/
+space/*
+!space/default/

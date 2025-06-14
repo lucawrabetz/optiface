@@ -7,6 +7,15 @@ OptiFooter {
   padding-left: 1;
 }
 
+MainCLI {
+    width: 95%;
+    height: 95%;
+    background: $panel;
+    color: $text;
+    border: round $primary-darken-2;
+    content-align: center middle;
+}
+
 #app_grid {
   layout: grid;
   grid-size: 2;
@@ -18,7 +27,9 @@ OptiFooter {
   grid-rows: 1fr 1fr;
 }
 
-#main_cli {
+#left_col {
+  align: center middle;
+  background: $panel;
 }
 
 .opti_widget {

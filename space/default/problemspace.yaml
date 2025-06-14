@@ -1,0 +1,33 @@
+instance_key:
+  rep:
+    default: 0
+    feature_type_str: int
+    required: false
+    short_name: i_rep
+    verbose_name: Instance Rep
+  set_name:
+    default: null
+    feature_type_str: str
+    required: true
+    short_name: s_n
+    verbose_name: Set Name
+output_key:
+  objective:
+    default: null
+    feature_type_str: float
+    required: true
+    short_name: obj
+    verbose_name: Objective
+  time_ms:
+    default: null
+    feature_type_str: float
+    required: true
+    short_name: t_ms
+    verbose_name: Running Time (ms)
+solver_key:
+  solver:
+    default: null
+    feature_type_str: str
+    required: true
+    short_name: sol
+    verbose_name: Solver
