@@ -32,9 +32,9 @@ class OptiWizard:
     _SUCCESS_2_STYLE = "bold cyan"
     _PROMPT_STYLE = "bold deep_pink3"
     _TAB = "  "
-    _OPTIORANGE = "dark_orange3"
-    _OPTIFACE = f"[bold {_OPTIORANGE}]optiface =][/bold {_OPTIORANGE}]"
-    _EXIT_MSG = "\n[bold dark_orange3]exiting optiface =] goodbye![/bold dark_orange3]"
+    _OPTIORANGE = "bold dark_orange3"
+    _OPTIFACE = f"[{_OPTIORANGE}]optiface =][/{_OPTIORANGE}]"
+    _EXIT_MSG = f"\n[{_OPTIORANGE}]exiting {_OPTIFACE} goodbye![/{_OPTIORANGE}]"
 
     _HOME = Path.cwd()
     _DBM = _HOME / "optiface/dbmanager/dbm.py"
